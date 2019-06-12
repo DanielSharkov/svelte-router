@@ -1,7 +1,5 @@
 import { writable } from 'svelte/store'
 
-import routerLink from './RouterLink'
-export const RouterLink = routerLink
 import routerViewport from './RouterViewport'
 export const RouterViewport = routerViewport
 

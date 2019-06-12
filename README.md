@@ -5,8 +5,9 @@
 Define the router configuration in `src/router.js`.
 
 ```js
-import Router from 'svelte-router'
+import { Router } from '@danielsharkov/svelte-router'
 import ViewHome from './views/Home'
+import ViewUser from './views/User'
 
 export default new Router({
     window: window,
@@ -38,20 +39,24 @@ Then use the `RouterViewport` in your `App.svelte` passing it your router instan
 
 ```html
 <nav>
-    <RouterLink to="home">Home</RouterLink>
-    <RouterLink to="users.user" params={ {uid: 'paul'} }>Paul</RouterLink>
-    <RouterLink
-        to="user.album"
-        params={{userId: 'alex', albumId: 'summer-2016'}}
-    >Bob</RouterLink>
+    <button on:click={router.push('home')}>
+        Home
+    </button>
+    <button on:click={router.push('home', { uid: 'paul' })}>
+        Paul
+    </button>
+    <button on:click={router.push('home', {
+        userId: 'alex', albumId: 'sumer-2016',
+    })}>
+        Bob
+    </button>
 </nav>
 
 <RouterViewport router={router}/>
 
 <script>
 import router from './router'
-import RouterViewport from 'router/RouterViewport'
-import RouterLink from 'router/RouterLink'
+import { RouterViewport } from '@danielsharkov/svelte-router'
 </script>
 ```
 
@@ -99,16 +104,21 @@ export default new Router({
             path: '/home',
             component: ViewHome,
             metadata: {
-                title: 'Home',
-                icon: 'fas fa-home',
+                nav: {
+                    title: 'Home',
+                    icon: 'fas fa-home',
+                },
+                picture: 'https://sample.url/picture.jpg',
             },
         },
         'about': {
             path: '/about',
             component: ViewAbout,
             metadata: {
-                title: 'About me',
-                icon: 'fas fa-address-card',
+                nav: {
+                    title: 'About me',
+                    icon: 'fas fa-address-card',
+                },
             },
         },
     },
@@ -120,8 +130,8 @@ Routes can be assigned arbitrary metadata which is then available in the view co
 **views/ViewHome.svelte:**
 
 ```html
-<h1>{metadata.title}</h1>
-<img src={metadata.icon} alt="Route icon">
+<h1>{metadata.nav.title}</h1>
+<img src={metadata.picture} alt="Route picture">
 
 <script>
 export let metadata;
@@ -132,21 +142,18 @@ export let metadata;
 
 ```html
 <nav>
-    {#each $Routes as route}
-        {#if route.metadata}
-            <RouterLink to={route.name}>
-                <i class="{route.metadata.icon}"/>
-                <span>{route.metadata.title}</span>
-            </RouterLink>
+    {#each $router.routes as route}
+        {#if route.metadata && route.metadata.nav}
+            <button on:click={router.push(route.name)}>
+                <i class="{route.metadata.nav.icon}"/>
+                <span>{route.metadata.nav.title}</span>
+            </button>
         {/if}
     {/each}
 </nav>
 
 <script>
 import router from './router'
-import RouterLink from 'router/RouterLink'
-
-$:Routes = router.routes
 </script>
 ```
 
@@ -173,8 +180,7 @@ export default new Router({
             component: UserView,
         },
         'noroute': {
-            path: '/',
-            component: {},
+            path: '/noroute',
         }
     },
     beforePush(name, params) {
@@ -183,7 +189,9 @@ export default new Router({
             name = 'home'
             break
         case 'user':
-            if (params.uid === 'a') params.uid = 'b'
+            if (params.uid === 'a') {
+                params.uid = 'b'
+            }
             break
         case 'noroute':
             return false

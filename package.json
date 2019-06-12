@@ -1,5 +1,5 @@
 {
-  "name": "svelte-router",
+  "name": "@danielsharkov/svelte-router",
   "main": "src/index.js",
   "repository": "github:danielsharkov/svelte-router",
   "authors": [
@@ -13,7 +13,7 @@
       "url": "http://danielsharkov.com"
     }
   ],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A simple and easy to use svelte router.",
   "keywords": ["svelte","router"],
   "license": "MIT",
