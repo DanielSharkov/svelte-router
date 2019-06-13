@@ -1,7 +1,6 @@
 import { writable } from 'svelte/store'
 
-import routerViewport from './RouterViewport'
-export const RouterViewport = routerViewport
+export { default as RouterViewport } from './RouterViewport'
 
 function isValidTokenChar(code) {
 	// a-z
