@@ -183,7 +183,7 @@ export default new Router({
             path: '/noroute',
         }
     },
-    beforePush(name, params) {
+    beforePush(name, params, previousRoute) {
         switch (name) {
         case 'root':
             name = 'home'
