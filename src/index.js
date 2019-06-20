@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store'
+import { writable, get as getStore } from 'svelte/store'
 
 export { default as RouterViewport } from './RouterViewport'
 
@@ -322,21 +322,16 @@ export function Router(conf) {
 			)
 		}
 
-		// Ensure path template uniqueness
-		if (template in _templates) {
-			throw new Error(
-				`route ${routeName} and ` +
-				`${_templates[template]} share the same path template: ` +
-				`'${template}'`
-			)
-		}
-
 		const entry = {
 			path,
 			component: route.component || null,
 			metadata: route.metadata || null,
 		}
-		_templates[template] = entry
+
+		// Ensure path template uniqueness
+		if (!(template in _templates)) {
+			_templates[template] = entry
+		}
 		_routes[routeName] = entry
 
 		let currentNode = _index
@@ -503,7 +498,12 @@ export function Router(conf) {
 		let route = verifyNameAndParams(name, params)
 
 		if (_beforePush !== undefined) {
-			const beforePushRes = _beforePush(name, params)
+			let prevRoute = getStore({subscribe: storeSubscribe}).route
+			if (prevRoute.name === '' && prevRoute.component === null) {
+				prevRoute = null
+			}
+			const beforePushRes = _beforePush(name, params, prevRoute)
+
 			if (beforePushRes === false) {
 				return false
 			}
@@ -514,7 +514,7 @@ export function Router(conf) {
 					`; returned: ${beforePushRes}`,
 				)
 			}
-			else if (beforePushRes != null) {
+			else if (beforePushRes !== null) {
 				if (!beforePushRes.hasOwnProperty("name")) {
 					throw new Error(
 						'beforePush must return either false ' +
