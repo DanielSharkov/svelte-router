@@ -269,6 +269,7 @@ export function Router(conf) {
 		}
 		return conf.window
 	})();
+	const eventRouteUpdated = new CustomEvent('routeUpdated')
 	const _templates = {}
 	const _routes = {}
 	const _index = {
@@ -549,6 +550,8 @@ export function Router(conf) {
 		if (redirect && _window.location.pathname != path) {
 			_window.history.pushState({name, params}, null, path)
 		}
+
+		setTimeout(() => window.dispatchEvent(eventRouteUpdated), 0)
 
 		return {name, params}
 	}
