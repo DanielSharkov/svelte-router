@@ -468,6 +468,9 @@ export function Router(conf) {
 	}
 
 	function stringifyRoutePath(tokens, params) {
+		if (tokens.length <= 0) {
+			return '/'
+		}
 		let str = ''
 		for (const idx in tokens) {
 			const token = tokens[idx]
@@ -525,11 +528,11 @@ export function Router(conf) {
 				}
 				name = beforePushRes.name
 				params = beforePushRes.params
-				path = nameToPath(name, params)
 			}
 	
 			route = verifyNameAndParams(name, params)
 		}
+		path = nameToPath(name, params)
 
 		// Update store
 		storeUpdate(store => {
