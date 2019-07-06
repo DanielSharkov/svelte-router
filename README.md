@@ -214,3 +214,18 @@ To programmatically go back or forward in history just use the [browser history 
 import router from './router'
 </script>
 ```
+
+### Route updated event listener
+The `routeUpdated` event listener allows for reactive changes in case of parameter changes
+
+```html
+<script>
+export let params;
+
+function routeUpdated() {
+    console.log('Route params changed!', params)
+}
+</script>
+
+<svelte:window on:routeUpdated={routeUpdated}/>
+```
