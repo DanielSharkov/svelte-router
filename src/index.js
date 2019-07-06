@@ -498,7 +498,7 @@ export function Router(conf) {
 	function setCurrentRoute(path, name, params, redirect = true) {
 		let route = verifyNameAndParams(name, params)
 
-		if (_beforePush !== undefined) {
+		if (_beforePush !== null) {
 			let prevRoute = getStore({subscribe: storeSubscribe}).route
 			if (prevRoute.name === '' && prevRoute.component === null) {
 				prevRoute = null
