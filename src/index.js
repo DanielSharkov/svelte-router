@@ -197,20 +197,21 @@ function validateRouteName(routeName) {
 	}
 }
 
-function parseURLPath(path) {
-	if (typeof path !== 'string') return new Error(
-		`unexpected type (${typeof path})`
-	)
+function parseURLPath(path, urlParams) {
+	if (typeof path !== 'string') {
+		return new Error(`unexpected type (${typeof path})`)
+	}
 
-	if (path.length < 1) return new Error(
-		`invalid path (empty)`
-	)
+	if (path.length < 1) {
+		return new Error(`invalid path (empty)`)
+	}
 
 	const pathTokens = []
 
-	if (path.charCodeAt(0) != 47) return new Error(
-		'a path path must begin with a slash'
-	)
+	// Check if path begin with a slash
+	if (path.charCodeAt(0) != 47) {
+		return new Error('a path path must begin with a slash')
+	}
 
 	let isPreviousSlash = true
 	let tokenStart = 1
@@ -220,14 +221,20 @@ function parseURLPath(path) {
 
 		if (isPreviousSlash) {
 			// Ignore multiple slashes
-			if (charCode == 47) continue
+			if (charCode == 47) {
+				continue
+			}
 			isPreviousSlash = false
 
 			// Start scanning token
-			if (isValidTokenChar(charCode)) tokenStart = itr
-			else return new Error(
-				`unexpected '${String.fromCharCode(charCode)}' at ${itr}`
-			)
+			if (isValidTokenChar(charCode)) {
+				tokenStart = itr
+			}
+			else {
+				return new Error(
+					`unexpected '${String.fromCharCode(charCode)}' at ${itr}`
+				)
+			}
 		}
 		// Terminating slash encountered
 		else if (charCode == 47) {
@@ -239,13 +246,17 @@ function parseURLPath(path) {
 				)
 			)
 		}
-		else if (!isValidTokenChar(charCode)) return new Error(
-			`unexpected '${String.fromCharCode(charCode)}' at ${itr}`
-		)
+		else if (!isValidTokenChar(charCode)) {
+			return new Error(
+				`unexpected '${String.fromCharCode(charCode)}' at ${itr}`
+			)
+		}
 
 		if (itr+1 >= path.length) {
 			// Last character reached
-			if (isPreviousSlash) break
+			if (isPreviousSlash) {
+				break
+			}
 			pathTokens.push(
 				path.substr(
 					tokenStart,
@@ -255,7 +266,63 @@ function parseURLPath(path) {
 		}
 	}
 
-	return pathTokens
+	let urlParamTokens = null
+
+	if (urlParams) {
+		urlParamTokens = {}
+		let question = urlParams.indexOf('?')
+		let hash = urlParams.indexOf('#')
+		if(hash == -1 && question == -1) {
+			return {}
+		}
+		if(hash == -1) {
+			hash = urlParams.length
+		}
+		let query = (
+			question == -1 ||
+			hash == question + 1 ?
+				urlParams.substring(hash)
+				: urlParams.substring(question + 1, hash)
+		)
+		let result = {}
+		query.split('&').forEach((part)=> {
+			if(!part) {
+				return
+			}
+			// replace every + with space, regexp-free version
+			part = part.split("+").join(' ')
+			
+			let eq = part.indexOf('=')
+			let key = eq >- 1 ?
+				part.substr(0,eq) : part
+			let val = eq >- 1 ?
+				decodeURIComponent(part.substr(eq+1)) : ''
+
+			let from = key.indexOf('[')
+			if (from == -1) {
+				urlParamTokens[decodeURIComponent(key)] = val
+			}
+			else {
+				let to = key.indexOf(']',from)
+				let index = decodeURIComponent(
+					key.substring(from + 1, to)
+				)
+				key = decodeURIComponent(
+					key.substring(0, from)
+				)
+				if(!urlParamTokens[key]) {
+					urlParamTokens[key] = []
+				}
+				if(!index) {
+					urlParamTokens[key].push(val)
+				}
+				else {
+					urlParamTokens[key][index] = val
+				}
+			}
+		})
+	}
+	return { pathTokens, urlParamTokens }
 }
 
 export function Router(conf) {
@@ -420,8 +487,13 @@ export function Router(conf) {
 		return route
 	}
 
-	function getRoute(path) {
-		const tokens = parseURLPath(path)
+	function getRoute(path, urlParams) {
+		const parsedURLPath = parseURLPath(path, urlParams)
+		if (parsedURLPath instanceof Error) {
+			return parsedURLPath
+		}
+		const tokens = parsedURLPath.pathTokens
+		const urlParamTokens = parsedURLPath.urlParamTokens
 		let currentNode = _index
 		const params = {}
 
@@ -431,6 +503,7 @@ export function Router(conf) {
 			}
 			return {
 				name: currentNode.routeName,
+				urlParams: urlParamTokens,
 				component: currentNode.component,
 			}
 		}
@@ -457,6 +530,7 @@ export function Router(conf) {
 					return {
 						name: currentNode.routeName,
 						params,
+						urlParams: urlParamTokens,
 						component: currentNode.component
 					}
 				}
@@ -467,7 +541,7 @@ export function Router(conf) {
 		}
 	}
 
-	function stringifyRoutePath(tokens, params) {
+	function stringifyRoutePath(tokens, params, urlParams) {
 		let str = ''
 		for (const idx in tokens) {
 			const token = tokens[idx]
@@ -478,16 +552,23 @@ export function Router(conf) {
 			}
 			str += token.param ? `/${params[token.token]}` : `/${token.token}`
 		}
+		if (urlParams && Object.keys(urlParams).length > 0) {
+			str += '?'
+			for (const param in urlParams) {
+				str += param +'='+ urlParams[param]
+			}
+		}
 		return str
 	}
 
-	function nameToPath(name, params) {
+	function nameToPath(name, params, urlParams) {
 		if (name && name === '') {
 			throw new Error(`invalid name: '${name}'`)
 		}
 		return stringifyRoutePath(
 			_routes[name].path.tokens,
 			params,
+			urlParams,
 		)
 	}
 
@@ -495,7 +576,7 @@ export function Router(conf) {
 	// current route pushing the path to the browser history if the current
 	// browser URL doesn't match and returns the name and parameters of
 	// the route that was finally selected
-	function setCurrentRoute(path, name, params, redirect = true) {
+	function setCurrentRoute(path, name, params, urlParams, redirect = true) {
 		let route = verifyNameAndParams(name, params)
 
 		if (_beforePush !== undefined) {
@@ -503,7 +584,7 @@ export function Router(conf) {
 			if (prevRoute.name === '' && prevRoute.component === null) {
 				prevRoute = null
 			}
-			const beforePushRes = _beforePush(name, params, prevRoute)
+			const beforePushRes = _beforePush(name, params, urlParams, prevRoute)
 
 			if (beforePushRes === false) {
 				return false
@@ -511,7 +592,7 @@ export function Router(conf) {
 			else if (beforePushRes === null) {
 				throw new Error(
 					'beforePush must return either false ' +
-					'or {name, ?params}' +
+					'or {name, ?params, ?urlParams}' +
 					`; returned: ${beforePushRes}`,
 				)
 			}
@@ -519,13 +600,14 @@ export function Router(conf) {
 				if (!beforePushRes.hasOwnProperty("name")) {
 					throw new Error(
 						'beforePush must return either false ' +
-						'or {name, ?params}' +
+						'or {name, ?params, ?urlParams}' +
 						`; returned: ${JSON.stringify(beforePushRes)}`,
 					)
 				}
 				name = beforePushRes.name
 				params = beforePushRes.params
-				path = nameToPath(name, params)
+				urlParams = beforePushRes.urlParams
+				path = nameToPath(name, params, urlParams)
 			}
 	
 			route = verifyNameAndParams(name, params)
@@ -536,6 +618,7 @@ export function Router(conf) {
 			store.route = {
 				name,
 				params,
+				urlParams,
 				component: route.component,
 				metadata: route.metadata,
 			}
@@ -544,28 +627,34 @@ export function Router(conf) {
 
 		// Reconstruct path from route tokens and parameters if non is given
 		if (path == null) {
-			path = stringifyRoutePath(route.path.tokens, params)
+			path = stringifyRoutePath(route.path.tokens, params, urlParams)
 		}
 
-		if (redirect && _window.location.pathname != path) {
-			_window.history.pushState({name, params}, null, path)
+		if (
+			redirect &&
+			_window.location.pathname + _window.location.search != path
+		) {
+			_window.history.pushState({name, params, urlParams}, null, path)
 		}
 
-		return {name, params}
+		setTimeout(() => window.dispatchEvent(eventRouteUpdated), 0)
+
+		return {name, params, urlParams}
 	}
 
-	function push(name, params) {
-		return setCurrentRoute(null, name, params)
+	function push(name, params, urlParams) {
+		return setCurrentRoute(null, name, params, urlParams)
 	}
 
-	function navigate(path) {
-		const route = getRoute(path)
+	function navigate(path, urlParams) {
+		const route = getRoute(path, urlParams)
 		if (route instanceof Error) {
 			if (_fallbackRoute != null) {
 				return setCurrentRoute(
 					null,
 					_fallbackRoute.name,
 					_fallbackRoute.params,
+					route.urlParams,
 					_fallbackRoute.redirect,
 				)
 			}
@@ -574,11 +663,11 @@ export function Router(conf) {
 			}
 		}
 
-		return setCurrentRoute(path, route.name, route.params)
+		return setCurrentRoute(path, route.name, route.params, route.urlParams)
 	}
 
 	_window.addEventListener('popstate', () => {
-		navigate(_window.location.pathname)
+		navigate(_window.location.pathname, _window.location.search)
 		_window.dispatchEvent(eventRouteUpdated)
 	})
 
@@ -598,5 +687,5 @@ export function Router(conf) {
 	})
 
 	// Initialize current route
-	navigate(_window.location.pathname)
+	navigate(_window.location.pathname, _window.location.search)
 }
