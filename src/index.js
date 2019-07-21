@@ -468,9 +468,6 @@ export function Router(conf) {
 	}
 
 	function stringifyRoutePath(tokens, params) {
-		if (tokens.length <= 0) {
-			return '/'
-		}
 		let str = ''
 		for (const idx in tokens) {
 			const token = tokens[idx]
@@ -501,7 +498,7 @@ export function Router(conf) {
 	function setCurrentRoute(path, name, params, redirect = true) {
 		let route = verifyNameAndParams(name, params)
 
-		if (_beforePush !== null) {
+		if (_beforePush !== undefined) {
 			let prevRoute = getStore({subscribe: storeSubscribe}).route
 			if (prevRoute.name === '' && prevRoute.component === null) {
 				prevRoute = null
@@ -528,11 +525,11 @@ export function Router(conf) {
 				}
 				name = beforePushRes.name
 				params = beforePushRes.params
+				path = nameToPath(name, params)
 			}
 	
 			route = verifyNameAndParams(name, params)
 		}
-		path = nameToPath(name, params)
 
 		// Update store
 		storeUpdate(store => {
@@ -553,8 +550,6 @@ export function Router(conf) {
 		if (redirect && _window.location.pathname != path) {
 			_window.history.pushState({name, params}, null, path)
 		}
-
-		setTimeout(() => window.dispatchEvent(eventRouteUpdated), 0)
 
 		return {name, params}
 	}
@@ -584,15 +579,22 @@ export function Router(conf) {
 
 	_window.addEventListener('popstate', () => {
 		navigate(_window.location.pathname)
+		_window.dispatchEvent(eventRouteUpdated)
 	})
 
 	Object.defineProperties(this, {
 		subscribe:  { value: storeSubscribe },
-		push:       { value: push },
+		push:       { value: (name, params) => {
+			push(name, params)
+			_window.dispatchEvent(eventRouteUpdated)
+		}},
 		back:       { value: () => _window.history.back() },
 		forward:    { value: () => _window.history.forward() },
 		nameToPath: { value: nameToPath },
-		navigate:   { value: navigate },
+		navigate:   { value: path => {
+			navigate(path)
+			_window.dispatchEvent(eventRouteUpdated)
+		}},
 	})
 
 	// Initialize current route
