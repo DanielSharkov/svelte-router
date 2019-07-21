@@ -552,10 +552,18 @@ export function Router(conf) {
 			}
 			str += token.param ? `/${params[token.token]}` : `/${token.token}`
 		}
-		if (urlParams && Object.keys(urlParams).length > 0) {
-			str += '?'
-			for (const param in urlParams) {
-				str += param +'='+ urlParams[param]
+		if (urlParams) {
+			const urlParamsLen = Object.keys(urlParams).length
+			let itr = 0
+			if (urlParamsLen > 0) {
+				str += '?'
+				for (const param in urlParams) {
+					str += param +'='+ urlParams[param]
+					if (itr < urlParamsLen - 1) {
+						str += '&'
+					}
+					itr++
+				}
 			}
 		}
 		return str
@@ -579,7 +587,7 @@ export function Router(conf) {
 	function setCurrentRoute(path, name, params, urlParams, redirect = true) {
 		let route = verifyNameAndParams(name, params)
 
-		if (_beforePush !== undefined) {
+		if (_beforePush !== null) {
 			let prevRoute = getStore({subscribe: storeSubscribe}).route
 			if (prevRoute.name === '' && prevRoute.component === null) {
 				prevRoute = null
@@ -637,9 +645,7 @@ export function Router(conf) {
 			_window.history.pushState({name, params, urlParams}, null, path)
 		}
 
-		setTimeout(() => window.dispatchEvent(eventRouteUpdated), 0)
-
-		return {name, params, urlParams}
+		return {name, path, params, urlParams}
 	}
 
 	function push(name, params, urlParams) {
