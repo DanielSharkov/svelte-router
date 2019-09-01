@@ -543,6 +543,9 @@ export function Router(conf) {
 
 	function stringifyRoutePath(tokens, params, urlParams) {
 		let str = ''
+		if (tokens.length < 1) {
+			return '/'
+		}
 		for (const idx in tokens) {
 			const token = tokens[idx]
 			if (token.param && !params) {
