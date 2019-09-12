@@ -1,4 +1,4 @@
-{#if $router.route.component === current.component}
+{#if componentNotChanged}
 	<div
 	in:transition={{ duration, easing, delay }}
 	out:transition={{ duration, easing, delay }}
@@ -55,4 +55,11 @@
 		setTimeout(() => current = $router.route)
 	}
 	updateComponent()
+
+	$:componentNotChanged = (
+		$router.route.name === current.name &&
+		$router.route.component === current.component &&
+		$router.route.params === current.params &&
+		$router.route.urlParams === current.urlParams
+	)
 </script>
