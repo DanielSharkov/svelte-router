@@ -60,9 +60,12 @@ import { RouterViewport } from '@danielsharkov/svelte-router'
 </script>
 ```
 
+
+
 ### Fallback Route
 
 ```js
+import { Router } from '@danielsharkov/svelte-router'
 import ViewHome from './views/Home'
 import ViewNotFound from './views/NotFound'
 
@@ -88,8 +91,11 @@ export default new Router({
 `fallback` is optional and defines the route the router should fall back to in case the user navigates to an inexistent URL.
 If `redirect` is `true` then fallback will push the route into the browser history and change the URL, otherwise it'll just display the fallback route in the router viewport without affecting the browser history. `redirect` is `false` by default.
 
+
+
 ### Metadata
 
+**router.js**
 ```js
 import ViewHome from './views/Home'
 import ViewAbout from './views/About'
@@ -157,11 +163,14 @@ import router from './router'
 </script>
 ```
 
+
+
 ### Before-Push Hook
 
 The `beforePush` hook is executed before a route is pushed to the history. It receives the name and parameters of the route the router is about to navigate to and must return the name and parameters the router must redirect to (if changed) or `false` if the routing should be canceled. It can be used for specifying redirect behavior or anything else that should be done before a push.
 
 ```js
+import { Router } from '@danielsharkov/svelte-router'
 import HomeView from './views/Home'
 import UserView from './views/User'
 
@@ -202,6 +211,8 @@ export default new Router({
 })
 ```
 
+
+
 ### Programmatic History Navigation
 
 To programmatically go back or forward in history just use the [browser history API](https://developer.mozilla.org/en-US/docs/Web/API/History_API) or the built-in aliases:
@@ -215,7 +226,10 @@ import router from './router'
 </script>
 ```
 
+
+
 ### Route updated event listener
+
 The `routeUpdated` event listener allows for reactive changes in case of parameter changes
 
 ```html
@@ -228,4 +242,75 @@ function routeUpdated() {
 </script>
 
 <svelte:window on:routeUpdated={routeUpdated}/>
+```
+
+
+
+### Router Links
+A router Link can only be used inside `<RouterViewport>`.
+
+**router.js**
+```js
+import ViewHome from './views/Home'
+import ViewAbout from './views/About'
+import ViewUser from './views/User'
+
+export default new Router({
+    window,
+    routes: {
+        'root': {
+            path: '/',
+        },
+        'home': {
+            path: '/home',
+            component: ViewHome,
+            metadata: {
+                nav: {
+                    title: 'Home',
+                    icon: 'fas fa-home',
+                },
+            },
+        },
+        'about': {
+            path: '/about',
+            component: ViewAbout,
+            metadata: {
+                nav: {
+                    title: 'About me',
+                    icon: 'fas fa-address-card',
+                },
+            },
+        },
+        'user': {
+            path: '/about/:userName/:userNumber',
+            component: ViewUser,
+        },
+    },
+})
+```
+
+**components/Nav.svelte**
+```html
+<nav>
+    {#each $router.routes as route}
+        {#if route.metadata && route.metadata.nav}
+            <RouterLink to={route.name}>
+                <i class="{route.metadata.nav.icon}"/>
+                <span>{route.metadata.nav.title}</span>
+            </RouterLink>
+        {/if}
+    {/each}
+</nav>
+
+<script>
+import { RouterLink } from '@danielsharkov/svelte-router'
+import router from './router'
+</script>
+```
+
+#### Router link with parameters
+```html
+<RouterLink to='user' params={{ userName: 'john_doe', userNumber: 0397 }}>
+    I'm a router link
+</RouterLink>
 ```
