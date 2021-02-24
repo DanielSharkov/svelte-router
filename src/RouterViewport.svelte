@@ -17,6 +17,7 @@
 		outroend(event)
 	}}>
 		<svelte:component
+			{router}
 			this={current.component}
 			params={current.params}
 			urlParams={current.urlParams}
