@@ -1,6 +1,6 @@
 {
   "name": "@danielsharkov/svelte-router",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A simple, fast and easy to use svelte router.",
   "license": "MIT",
   "keywords": ["svelte", "svelte3", "router", "typescript"],
@@ -32,6 +32,18 @@
   "scripts": {
     "build": "rollup -c",
     "lint": "eslint \"src/*.ts\""
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./index.d.ts",
+      "browser": {
+        "import": "./index.mjs",
+        "require": "./index.js"
+      },
+      "import": "./index.mjs",
+      "require": "./index.js"
+    }
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.6",

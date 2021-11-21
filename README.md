@@ -22,8 +22,7 @@
 
 ## 💿 Installation
 
-Just `npm i --save-dev @danielsharkov/svelte-router`
-And done 😁 🎉
+Just `npm i --save-dev @danielsharkov/svelte-router` and done 😁 🎉
 
 ## Initializing a Router Instance
 
