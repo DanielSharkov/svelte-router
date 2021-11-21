@@ -1,0 +1,16 @@
+{
+	"extends": "@tsconfig/svelte/tsconfig.json",
+	"compilerOptions": {
+		"target": "es6",
+		"strict": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"removeComments": true,
+		"sourceMap": false,
+		"declarationDir": ".",
+		"outDir": "src"
+	},
+
+	"include": ["src/**/*"],
+	"exclude": ["node_modules/*"]
+}

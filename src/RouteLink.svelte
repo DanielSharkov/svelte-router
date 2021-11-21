@@ -1,27 +1,28 @@
 <script>
-	import { getContext } from 'svelte'
+	import {getContext} from 'svelte'
 
-	export let to;
-	export let params;
+	export let to
+	export let params = undefined
+	export let router = undefined
 
-	if (typeof to !== 'string' && to.length < 1) {
+	if (typeof to !== 'string' || to.length < 1) {
 		throw new Error(
-			'[SvelteRouter] <RouterLink> is missing the prop \"to\"'
+			'[SvelteRouter] <RouterLink> is missing the \"to\" prop'
 		)
 	}
 
-	const router = getContext('router')
-	if (!router) {
+	const routerInstance = router || getContext('svelte_router')
+	if (!routerInstance) {
 		throw new Error(
 			'[SvelteRouter] <RouterLink> used outside a router instance <RouterViewport>'
 		)
 	}
 	const attrs = Object.assign({}, $$props)
 
-	let href = null
+	let href
 	// Catch missing parameters, throw error here to identify error
 	try {
-		href = router.nameToPath(to, params)
+		href = routerInstance.nameToPath(to, params)
 	} catch(err) {
 		throw new Error(`[SvelteRouter] <RouterLink> (to: "${to}"): ` + err)
 	}
@@ -34,24 +35,19 @@
 	}
 	removeAttrs()
 
-	function navigate(e) {
-		e.stopPropagation()
-		e.preventDefault()
+	function navigate() {
+		if (!routerInstance) throw new Error(
+			'[SvelteRouter] <RouterLink> missing Router instance'
+		)
 
-		if (!router) {
-			throw new Error(
-				'[SvelteRouter] <RouterLink> missing Router instance'
-			)
-		}
-
-		try {
-			router.push(to, params)
+		try {
+			routerInstance.push(to, params)
 		} catch(err) {
 			throw new Error(`[SvelteRouter] <RouterLink> (to: "${to}"): ` + err)
 		}
 	}
 </script>
 
-<a {href} on:click|preventDefault={ navigate } {...attrs}>
+<a {href} on:click|preventDefault|stopPropagation={navigate} {...attrs}>
 	<slot></slot>
 </a>

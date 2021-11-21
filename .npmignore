@@ -1,0 +1,7 @@
+.vscode
+.DS_Store
+tests
+.eslint*
+*.svg
+router.ts
+rollup.config.js
