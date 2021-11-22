@@ -542,8 +542,8 @@ then leave the parameter `router` blank.
 You can find full router examples in [danielsharkov/svelte-router-examples](https://github.com/DanielSharkov/svelte-router-examples)
 
 ### ✨ Thanks for contribution goes to:
-@romshark
-@madebyfabian
+[@romshark](https://github.com/romshark)
+[@madebyfabian](https://github.com/madebyfabian)
 
 ### ⚖️ License
 Svelte Router is a open source software [licensed as MIT](LICENSE).
