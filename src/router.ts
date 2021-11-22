@@ -47,7 +47,7 @@ export type RouterLocation = {
 	params?:    RouteParams
 	urlQuery?:  RouteParams
 	component?: typeof SvelteComponent
-	props?:     unknown
+	props?:     any // eslint-disable-line
 }
 
 export type RouterActualRoute = {
@@ -77,13 +77,14 @@ export type RouterFallback = {
 
 export interface RouterConfig {
 	window:             Window
+	basePath?:          string
 	beforePush?:        RouterBeforePush
 	fallback?:          RouterFallback
 	restoreScroll?:     boolean
 	routes:             {[routeName: string]: {
 		path:      string
 		component: typeof SvelteComponent
-		props?:    unknown
+		props?:    any // eslint-disable-line
 	}}
 }
 
@@ -95,7 +96,7 @@ type PathTemplate = {
 export type RouterRoute = {
 	path:      PathTemplate
 	component: typeof SvelteComponent
-	props:     unknown
+	props:     any // eslint-disable-line
 }
 
 type Router_Index = {
@@ -151,6 +152,7 @@ export class SvelteRouter implements Readable<Router> {
 	private _beforePush: {[id: string]: RouterBeforePush} = {}
 	private _beforePushOrder: Array<string> = []
 	private _fallback?: RouterFallback
+	private _basePath?: PathTemplate
 	private _routeUpdatedEventName = 'routeUpdated'
 	private _restoreScroll = true
 	private _globalBeforePushHookID
@@ -191,6 +193,17 @@ export class SvelteRouter implements Readable<Router> {
 			this._restoreScroll = false
 		}
 
+		if (conf.basePath && conf.basePath !== '/') {
+			try {
+				this._basePath = parsePathTemplate(conf.basePath)
+			}
+			catch(err) {
+				throw new Error(
+					`the base URL defines an invalid path template: ${err}`
+				)
+			}
+		}
+
 		let err = null
 		this.#internalStore.update(($intStr)=> {
 			for (const routeName in conf.routes) {
@@ -211,15 +224,17 @@ export class SvelteRouter implements Readable<Router> {
 				let path: PathTemplate
 				try {
 					path = parsePathTemplate(pathTemplate)
-				} catch(e) {
+				}
+				catch(tplErr) {
 					err = new Error(
-						`route "${routeName}" defines an invalid path template: ${e}`
+						`route "${routeName}" defines an invalid path ` +
+						`template: ${tplErr}`
 					)
 					return $intStr
 				}
 
 				// Ensure path template uniqueness
-				if (pathTemplate in $intStr.routes) {
+				if (routeName in $intStr.routes) {
 					err = new Error(`duplicate of route "${routeName}"`)
 					return $intStr
 				}
@@ -306,18 +321,21 @@ export class SvelteRouter implements Readable<Router> {
 				this.verifyNameAndParams(
 					historyState.name, historyState.params,
 				)
-				this.setCurrentRoute(
+				this._setCurrentRoute(
 					currentPath,
 					historyState.name,
 					historyState.params,
 					historyState.urlQuery,
 					true,
 				)
-			} catch(e) {
+			}
+			catch(e) {
 				this.pushPath(currentPath)
 			}
 		}
-		else this.pushPath(currentPath)
+		else {
+			this.pushPath(currentPath)
+		}
 	}
 
 	private _dispatchRouteUpdated() {
@@ -362,11 +380,9 @@ export class SvelteRouter implements Readable<Router> {
 			hookIdx < 0 ||
 			(this._globalBeforePushHookID &&
 			this._globalBeforePushHookID === hookID)
-		) {
-			throw new Error(
-				`[SvelteRouter] hook by ID "${hookID}" not subscribed`
-			)
-		}
+		) throw new Error(
+			`[SvelteRouter] hook by ID "${hookID}" not subscribed`
+		)
 		delete this._beforePush[hookID]
 		this._beforePushOrder.splice(hookIdx, 1)
 	}
@@ -393,33 +409,39 @@ export class SvelteRouter implements Readable<Router> {
 	}
 
 	/**
-	 * verifyNameAndParams
+	 * verifyNameAndParams verifies the route by either returning the route or
+	 * throwing an error
+	 * 
 	 * @param routeName string
 	 * @param params RouteParams
+	 * @throws Error
 	 * @returns RouterRoute
 	 */
 	public verifyNameAndParams(
 		routeName: string, params?: RouteParams,
 	): RouterRoute {
-		if (!routeName) {
-			throw new Error('missing parameter name')
-		}
+		if (!routeName) throw new Error(
+			'missing parameter name'
+		)
+
 		const route = getStore(this.#internalStore).routes[routeName]
-		if (route == null) {
-			throw new Error(`route "${routeName}" not found`)
-		}
+		if (!route) throw new Error(
+			`route "${routeName}" not found`
+		)
 
 		const paramNames = route.path.params
 		if (paramNames.length > 0) {
-			if (!params) {
-				throw new Error(`missing parameters: ${paramNames}`)
-			}
+			if (!params) throw new Error(
+				`missing parameters [${paramNames}] ` +
+				`for route "${routeName}"`
+			)
 
 			// Parameters expected
 			for (const paramName of route.path.params) {
-				if (!(paramName in params)) {
-					throw new Error(`missing parameter '${paramName}'`)
-				}
+				if (!(paramName in params)) throw new Error(
+					`missing parameter "${paramName}" ` +
+					`for route "${routeName}"`
+				)
 			}
 		}
 
@@ -429,8 +451,8 @@ export class SvelteRouter implements Readable<Router> {
 	/**
 	 * getRoute parses the given URL and returns the matching route.
 	 * It throws an error if no matching route was found.
-	 * @param path 
-	 * @param urlQuery 
+	 * 
+	 * @param url string
 	 * @returns RouterRouteData
 	 * @throws Error 
 	 */
@@ -440,8 +462,8 @@ export class SvelteRouter implements Readable<Router> {
 		let currentNode = getStore(this.#internalStore).index
 		const params: {[token: string]: string} = {}
 
-		if (pathTokens.length === 0) {
-			if (currentNode.name == null) {
+		if (pathTokens.length === 0 && !this._basePath) {
+			if (!currentNode.name) {
 				throw new Error(`URL "${url}" doesn't resolve any route`)
 			}
 			return {name: currentNode.name}
@@ -449,22 +471,27 @@ export class SvelteRouter implements Readable<Router> {
 		else for (let level=0; level < pathTokens.length; level++) {
 			const token = pathTokens[level]
 
-			// tokens is a static route
-			if (token in currentNode.routes) {
-				currentNode = currentNode.routes[token]
+			// only non-base-path-tokens
+			if (!(
+				this._basePath && this._basePath.tokens.includes(token) &&
+				level < this._basePath.tokens.length
+			)) {
+				// tokens is a static route
+				if (token in currentNode.routes) {
+					currentNode = currentNode.routes[token]
+				}
+				// parameter route
+				else if (currentNode.param) {
+					currentNode = currentNode.param
+					params[currentNode.token] = token
+				}
+				else throw new Error(
+					`URL "${url}" doesn't resolve any route`
+				)
 			}
-			// parameter route
-			else if (currentNode.param) {
-				currentNode = currentNode.param
-				params[currentNode.token] = token
-			}
-			else throw new Error(
-				`URL "${url}" doesn't resolve any route`
-			)
 
 			// is last token
 			if (level+1 >= pathTokens.length) {
-				// display component
 				if (currentNode.component) {
 					return {
 						name: currentNode.name,
@@ -491,39 +518,48 @@ export class SvelteRouter implements Readable<Router> {
 	 * @throws Error
 	 */
 	public stringifyRouteToURL(
-		path: PathTemplate, params?: RouteParams, urlQuery?: RouteParams,
+		pathTemp: PathTemplate, params?: RouteParams, urlQuery?: RouteParams,
 	) {
-		let str = ''
-		if (path.tokens.length < 1) return '/'
+		let path = ''
 
-		for (const token of path.tokens) {
-			const isParam = path.params.includes(token)
+		if (this._basePath) {
+			for (const token of this._basePath.tokens) {
+				path += `/${token}`
+			}
+		}
+
+		if (pathTemp.tokens.length < 1) {
+			return path === '' ? '/' : path
+		}
+
+		for (const token of pathTemp.tokens) {
+			const isParam = pathTemp.params.includes(token)
 			if (isParam) {
 				if (params !== undefined) {
-					str += `/${params[token]}`
+					path += `/${params[token]}`
 				}
 				else throw new Error(
 					`expected parameter '${token}' but got '${params}'`
 				)
 			}
 			else {
-				str += `/${token}`
+				path += `/${token}`
 			}
 		}
 
 		if (urlQuery) {
 			const queryLen = Object.keys(urlQuery).length
 			if (queryLen > 0) {
-				str += '?'
+				path += '?'
 				let itr = 0
 				for (const param in urlQuery) {
-					str += param +'='+ urlQuery[param]
-					if (itr < queryLen-1) str += '&'
+					path += param +'='+ urlQuery[param]
+					if (itr < queryLen-1) path += '&'
 					itr++
 				}
 			}
 		}
-		return str
+		return path
 	}
 
 	/**
@@ -555,7 +591,7 @@ export class SvelteRouter implements Readable<Router> {
 	}
 
 	/**
-	 * setCurrentRoute executes the beforePush hooks (if any), updates the
+	 * _setCurrentRoute executes the beforePush hooks (if any), updates the
 	 * current route, pushing the path to the browser history, (if the current
 	 * browser URL doesn't match) and returns the name and parameters of
 	 * the route that was finally selected
@@ -568,7 +604,7 @@ export class SvelteRouter implements Readable<Router> {
 	 * @returns RouterActualRoute
 	 * @throws Error
 	 */
-	private async setCurrentRoute(
+	private async _setCurrentRoute(
 		path: string, name: string, params?: RouteParams,
 		urlQuery?: RouteParams, replace = false,
 	): Promise<RouterActualRoute> {
@@ -594,11 +630,16 @@ export class SvelteRouter implements Readable<Router> {
 							reject,
 						})
 					})
-				} catch(newRoute) {
+				}
+				catch(newRoute) {
 					if (newRoute === undefined) {
 						return {
 							name: location.name,
-							path: this.nameToPath(name, params, urlQuery),
+							path: this.nameToPath(
+								location.name,
+								location.params,
+								location.urlQuery,
+							),
 							params: location.params,
 							urlQuery: location.urlQuery,
 						}
@@ -623,7 +664,7 @@ export class SvelteRouter implements Readable<Router> {
 		}
 
 		// Reconstruct path from route tokens and parameters if non is given
-		if ((this._fallback && name !== this._fallback.name) && path === '') {
+		if (!(this._fallback && name === this._fallback.name)) {
 			path = this.stringifyRouteToURL(route.path, params, urlQuery)
 		}
 
@@ -679,18 +720,19 @@ export class SvelteRouter implements Readable<Router> {
 		if (typeof rawUrlQuery === 'string') {
 			urlQuery = parseUrlQuery(rawUrlQuery)
 		}
-		return this.setCurrentRoute('', name, params, urlQuery)
+		return this._setCurrentRoute('', name, params, urlQuery)
 	}
 
 	public pushPath(path: string) {
 		try {
 			const route = this.getRoute(path)
-			return this.setCurrentRoute(
+			return this._setCurrentRoute(
 				path, route.name, route.params, route.urlQuery,
 			)
-		} catch(err) {
+		}
+		catch(err) {
 			if (this._fallback) {
-				return this.setCurrentRoute(
+				return this._setCurrentRoute(
 					path, this._fallback.name,
 					undefined, undefined,
 					this._fallback.replace,
@@ -700,15 +742,15 @@ export class SvelteRouter implements Readable<Router> {
 		}
 	}
 
-	public back(): void {
+	public back() {
 		this._window.history.back()
 	}
 
-	public forward(): void {
+	public forward() {
 		this._window.history.forward()
 	}
 
-	public destroy(): void {
+	public destroy() {
 		this._window.removeEventListener(
 			'popstate', this._onPopState.bind(this),
 		)
