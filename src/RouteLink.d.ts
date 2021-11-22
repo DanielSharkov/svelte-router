@@ -1,5 +1,5 @@
 import {SvelteComponentTyped} from 'svelte'
-import type {RouteParams} from './router'
+import type {RouteParams} from '.'
 
 declare module 'RouteLink.svelte' {
 	interface RouteLinkProps {

@@ -24,11 +24,11 @@
   ],
   "publishConfig": {"access": "public"},
   "private": false,
+  "source": "src/index.ts",
+  "types": "src/index.d.ts",
   "main": "src/router.js",
-  "source": "src/router.ts",
   "module": "src/router.mjs",
   "svelte": "src/index.js",
-  "types": "src/index.d.ts",
   "scripts": {
     "build": "rollup -c",
     "lint": "eslint \"src/*.ts\""

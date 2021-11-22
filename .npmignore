@@ -3,5 +3,5 @@
 tests
 .eslint*
 *.svg
-router.ts
+index.ts
 rollup.config.js
