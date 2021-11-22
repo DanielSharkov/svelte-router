@@ -36,6 +36,7 @@ import ViewUser from './views/User'
 
 export default new SvelteRouter({
 	window: window,
+	baseUrl: '/persistent/path',
 	routes: {
 		'home': {
 			path: '/',
@@ -58,6 +59,11 @@ export default new SvelteRouter({
 
 * `window` should usually be assigned the [browser object model](https://www.w3schools.com/js/js_window.asp)
 but can also be used for testing and debugging purposes.
+
+* `basePath` is an optional field which has the same principle as the HTML
+`<Base>` tag. It acts like a prefix to the paths. It's useful in cases like
+hosting on GitHub Pages, where the base URL is always `https://<username>.github.io/<repo-name>`
+and the base path therefor always is `/<repo-name>`.
 
 * a route name is required to be unique and is allowed to contain
 `a-z`, `A-Z`, `0-9`, `-`, `_` and `.`
