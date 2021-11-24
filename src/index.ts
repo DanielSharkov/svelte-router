@@ -309,32 +309,36 @@ export class SvelteRouter implements Readable<Router> {
 			'popstate', this._onPopState.bind(this), {passive: true},
 		)
 
+		this._initRoute()
+	}
+
+	private async _initRoute() {
 		const currentPath = (
 			this._window.location.pathname +
 			this._window.location.search
 		)
-		
+
 		// Initialize current route
-		const historyState = this._window.history.state
-		if (historyState?.name) {
+		try {
+			const state = this._window.history.state
+			if (!state?.name) throw 0
+			await this._setCurrentRoute(
+				currentPath, state.name, state.params, state.urlQuery,
+				false, true,
+			)
+		}
+		catch(_) {
 			try {
-				this.verifyNameAndParams(
-					historyState.name, historyState.params,
-				)
-				this._setCurrentRoute(
-					currentPath,
-					historyState.name,
-					historyState.params,
-					historyState.urlQuery,
+				const route = this.getRoute(currentPath)
+				await this._setCurrentRoute(
+					currentPath, route.name, route.params, route.urlQuery,
 					true,
 				)
 			}
-			catch(e) {
-				this.pushPath(currentPath)
+			catch(err) {
+				if (!this._fallback) throw err
+				await this._setRouteFallback()
 			}
-		}
-		else {
-			this.pushPath(currentPath)
 		}
 	}
 
@@ -347,23 +351,51 @@ export class SvelteRouter implements Readable<Router> {
 		)
 	}
 
-	private async _onPopState() {
-		const state = this._window.history.state
-		this.push(
-			state.name,
-			state.params,
-			state.urlQuery,
-		)
-		this._dispatchRouteUpdated()
-		await tick()
-		setTimeout(()=> {
-			if (state.scroll) {
-				this._window.scrollTo({
-					left: state.scroll[0],
-					top: state.scroll[1],
-				})
+	private _setRouteFallback() {
+		if (this._fallback) {
+			return this._setCurrentRoute(
+				this._window.location.pathname +
+				this._window.location.search,
+				this._fallback.name,
+				undefined, undefined,
+				this._fallback.replace, true,
+			)
+		}
+		throw new Error('unexpected: fallback not set')
+	}
+
+	private async _onPopState(event: PopStateEvent) {
+		if (event.state) {
+			try {
+				let route = await this._setCurrentRoute(
+					event.state.path,
+					event.state.name,
+					event.state.params,
+					event.state.urlQuery,
+					true, true,
+				)
+				if (event.state.scroll) {
+					await tick()
+					this._window.scrollTo({
+						left: event.state.scroll[0],
+						top: event.state.scroll[1],
+					})
+				}
+				return route
 			}
-		})
+			catch(err) {
+				if (!this._fallback) throw err
+			}
+		}
+
+		if (this._fallback) {
+			return await this._setRouteFallback()
+		}
+
+		// panic, router can't handle history state
+		throw new Error(
+			`unexpected history state: ${JSON.stringify(event.state)}`
+		)
 	}
 
 	/**
@@ -454,7 +486,7 @@ export class SvelteRouter implements Readable<Router> {
 	 * 
 	 * @param url string
 	 * @returns RouterRouteData
-	 * @throws Error 
+	 * @throws Error
 	 */
 	public getRoute(url: string): RouterRouteData {
 		const {pathTokens, urlQuery} = parseURLPath(url)
@@ -577,8 +609,7 @@ export class SvelteRouter implements Readable<Router> {
 	): string {
 		const routes = getStore(this.#internalStore).routes
 		if (
-			typeof routeName !== 'string' ||
-			routeName === '' ||
+			typeof routeName !== 'string' || routeName === '' ||
 			!(routeName in routes)
 		) {
 			throw new Error(`invalid route name: '${routeName}'`)
@@ -606,7 +637,7 @@ export class SvelteRouter implements Readable<Router> {
 	 */
 	private async _setCurrentRoute(
 		path: string, name: string, params?: RouteParams,
-		urlQuery?: RouteParams, replace = false,
+		urlQuery?: RouteParams, replace = false, keepHistoryState = false,
 	): Promise<RouterActualRoute> {
 		let route = this.verifyNameAndParams(name, params)
 
@@ -682,31 +713,37 @@ export class SvelteRouter implements Readable<Router> {
 			return $rtrStr
 		})
 
-		if (replace) {
-			this._window.history.replaceState({
-				name, params, urlQuery,
-			}, '')
-		}
-		else if (
-			path != (
-				this._window.location.pathname +
-				this._window.location.search
-			)
-		) {
-			const prevState = this._window.history.state
-			if (prevState && this._restoreScroll) {
+		if (!keepHistoryState) {
+			const historyState = this._window.history.state
+			if (replace) {
 				this._window.history.replaceState({
-					name: prevState.name,
-					params: prevState.params,
-					urlQuery: prevState.urlQuery,
-					scroll: [this._window.scrollX, this._window.scrollY],
+					name, params, urlQuery,
 				}, '')
 			}
-
-			this._window.history.pushState(
-				{name, params, urlQuery}, '', path,
-			)
-			this._window.scrollTo({top: 0, left: 0})
+			else if (
+				!historyState || (
+					historyState.name != name ||
+					path != (
+						this._window.location.pathname +
+						this._window.location.search
+					)
+				)
+			) {
+				const prevState = this._window.history.state
+				if (prevState && this._restoreScroll) {
+					this._window.history.replaceState({
+						name: prevState.name,
+						params: prevState.params,
+						urlQuery: prevState.urlQuery,
+						scroll: [this._window.scrollX, this._window.scrollY],
+					}, '')
+				}
+	
+				this._window.history.pushState(
+					{name, params, urlQuery}, '', path,
+				)
+				this._window.scrollTo({top: 0, left: 0})
+			}
 		}
 
 		this._dispatchRouteUpdated()
