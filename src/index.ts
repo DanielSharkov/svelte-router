@@ -742,8 +742,8 @@ export class SvelteRouter implements Readable<Router> {
 				this._window.history.pushState(
 					{name, params, urlQuery}, '', path,
 				)
-				this._window.scrollTo({top: 0, left: 0})
 			}
+			this._window.scrollTo({top: 0, left: 0})
 		}
 
 		this._dispatchRouteUpdated()
