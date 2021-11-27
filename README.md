@@ -1,10 +1,10 @@
-![Simple, fast & easy to use Svelte Router](https://github.com/DanielSharkov/svelte-router/blob/master/readme-banner.svg)
+[![Simple, fast & easy to use Svelte Router](https://github.com/DanielSharkov/svelte-router/blob/master/readme-banner.svg)](#)
 
-[![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router) ![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
+[![Live Demo](https://img.shields.io/badge/▶-Live%20Demo-success)](https://danielsharkov.github.io/svelte-router-examples) [![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router) ![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
 
 # 🗂 Index
 
-- [Installation](#installation)
+- [Installation](#-installation)
 - [Initializing a Router Instance](#initializing-a-router-instance)
 - [Fallback Route](#fallback-route)
 - [Route View Component Props](#route-view-component-props)
@@ -16,7 +16,7 @@
 - [RouteLink Component](#routelink-component)
 	- [RouteLink with Parameters](#routelink-with-parameters)
 - [Svelte Action use:link](#svelte-action-uselink)
-- [Router Examples](#router-examples)
+- [Router Examples](#-router-examples)
 
 # 🧗‍♀️ Getting Started
 
@@ -36,6 +36,7 @@ import ViewUser from './views/User'
 
 export default new SvelteRouter({
 	window: window,
+	scrollingElement: window.document.scrollingElement,
 	baseUrl: '/persistent/path',
 	routes: {
 		'home': {
@@ -57,8 +58,9 @@ export default new SvelteRouter({
 })
 ```
 
-* `window` should usually be assigned the [browser object model](https://www.w3schools.com/js/js_window.asp)
-but can also be used for testing and debugging purposes.
+* `window` should usually be assigned the [browser object model](https://www.w3schools.com/js/js_window.asp) but can also be used for testing and debugging purposes.
+
+* `scrollingElement` should usually be assigned the [Document.scrollingElement](https://developer.mozilla.org/en-US/docs/Web/API/document/scrollingElement), which is the usual scrollable viewport. But if your viewport differs you may then provid it your needed `Element`. When no `scrollableElement` is provided then the router won't save and restore scroll state by the history.
 
 * `basePath` is an optional field which has the same principle as the HTML
 `<Base>` tag. It acts like a prefix to the paths. It's useful in cases like
