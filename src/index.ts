@@ -8,6 +8,80 @@ export {default as RouteLink} from './RouteLink.svelte'
 
 // Type Definitionzs ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+export interface RouterWindowLocation {
+	pathname: string
+	search: string
+}
+
+export interface RouterWindowHistory {
+	readonly state: any
+	back(): void
+	forward(): void
+	pushState(data: any, unused: string, url?: string | URL | null): void
+	replaceState(data: any, unused: string, url?: string | URL | null): void
+}
+
+export interface RouterScrollingElement {
+	scrollLeft: number
+	scrollTop: number
+
+	scrollTo(options?: ScrollToOptions): void
+	scrollTo(x: number, y: number): void
+
+	addEventListener<K extends keyof RouterNavigatorEventMap>(
+		type: K,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		options?: boolean | AddEventListenerOptions,
+	): void
+	addEventListener(
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: boolean | AddEventListenerOptions,
+	): void
+
+	removeEventListener<K extends keyof RouterNavigatorEventMap>(
+		type: K,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		options?: boolean | EventListenerOptions,
+	): void
+	removeEventListener(
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: boolean | EventListenerOptions,
+	): void
+}
+
+export interface RouterNavigatorEventMap {
+	popstate: PopStateEvent
+}
+
+export interface RouterNavigator extends EventTarget {
+	get location(): RouterWindowLocation
+	readonly history: RouterWindowHistory
+
+	addEventListener<K extends keyof RouterNavigatorEventMap>(
+		type: K,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		options?: boolean | AddEventListenerOptions,
+	): void
+	addEventListener(
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: boolean | AddEventListenerOptions,
+	): void
+
+	removeEventListener<K extends keyof RouterNavigatorEventMap>(
+		type: K,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		options?: boolean | EventListenerOptions,
+	): void
+	removeEventListener(
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: boolean | EventListenerOptions,
+	): void
+}
+
 enum Char {
 	CapitalA = 'A',
 	CapitalZ = 'Z',
@@ -76,11 +150,11 @@ export type RouterFallback = {
 }
 
 export interface RouterConfig {
-	window:             Window
+	window:             RouterNavigator
+	scrollingElement?:  RouterScrollingElement
 	basePath?:          string
 	beforePush?:        RouterBeforePush
 	fallback?:          RouterFallback
-	restoreScroll?:     boolean
 	routes:             {[routeName: string]: {
 		path:      string
 		component: typeof SvelteComponent
@@ -148,13 +222,13 @@ export class SvelteRouter implements Readable<Router> {
 		},
 	})
 
-	private _window: Window
+	private _window: RouterNavigator
+	private _scrollingElement?: RouterScrollingElement
 	private _beforePush: {[id: string]: RouterBeforePush} = {}
 	private _beforePushOrder: Array<string> = []
 	private _fallback?: RouterFallback
 	private _basePath?: PathTemplate
 	private _routeUpdatedEventName = 'routeUpdated'
-	private _restoreScroll = true
 	private _globalBeforePushHookID
 
 	constructor(conf: RouterConfig) {
@@ -178,6 +252,10 @@ export class SvelteRouter implements Readable<Router> {
 		}
 		this._window = conf.window
 
+		if (conf.scrollingElement) {
+			this._scrollingElement = conf.scrollingElement
+		}
+
 		if (conf.beforePush) {
 			this._globalBeforePushHookID = '__gloal_before_push_hook'
 			this._beforePush[this._globalBeforePushHookID] = conf.beforePush
@@ -188,9 +266,6 @@ export class SvelteRouter implements Readable<Router> {
 			if (typeof this._fallback.replace !== 'boolean') {
 				this._fallback.replace = true
 			}
-		}
-		if (conf.restoreScroll === false) {
-			this._restoreScroll = false
 		}
 
 		if (conf.basePath && conf.basePath !== '/') {
@@ -305,7 +380,7 @@ export class SvelteRouter implements Readable<Router> {
 			return $rtrStr
 		})
 
-		this._window.addEventListener(
+		this._window.addEventListener<'popstate'>(
 			'popstate', this._onPopState.bind(this), {passive: true},
 		)
 
@@ -364,24 +439,24 @@ export class SvelteRouter implements Readable<Router> {
 		throw new Error('unexpected: fallback not set')
 	}
 
-	private async _onPopState(event: PopStateEvent) {
+	private async _onPopState(event: PopStateEvent): Promise<void> {
 		if (event.state) {
 			try {
-				let route = await this._setCurrentRoute(
+				await this._setCurrentRoute(
 					event.state.path,
 					event.state.name,
 					event.state.params,
 					event.state.urlQuery,
 					true, true,
 				)
-				if (event.state.scroll) {
+				if (this._scrollingElement && event.state.scroll) {
 					await tick()
-					this._window.scrollTo({
+					this._scrollingElement.scrollTo({
 						left: event.state.scroll[0],
 						top: event.state.scroll[1],
 					})
 				}
-				return route
+				return
 			}
 			catch(err) {
 				if (!this._fallback) throw err
@@ -389,11 +464,10 @@ export class SvelteRouter implements Readable<Router> {
 		}
 
 		if (this._fallback) {
-			return await this._setRouteFallback()
+			await this._setRouteFallback()
 		}
-
 		// panic, router can't handle history state
-		throw new Error(
+		else throw new Error(
 			`unexpected history state: ${JSON.stringify(event.state)}`
 		)
 	}
@@ -718,7 +792,7 @@ export class SvelteRouter implements Readable<Router> {
 			if (replace) {
 				this._window.history.replaceState({
 					name, params, urlQuery,
-				}, '')
+				}, '', path)
 			}
 			else if (
 				!historyState || (
@@ -729,13 +803,15 @@ export class SvelteRouter implements Readable<Router> {
 					)
 				)
 			) {
-				const prevState = this._window.history.state
-				if (prevState && this._restoreScroll) {
+				if (historyState && this._scrollingElement) {
 					this._window.history.replaceState({
-						name: prevState.name,
-						params: prevState.params,
-						urlQuery: prevState.urlQuery,
-						scroll: [this._window.scrollX, this._window.scrollY],
+						name: historyState.name,
+						params: historyState.params,
+						urlQuery: historyState.urlQuery,
+						scroll: [
+							this._scrollingElement.scrollLeft,
+							this._scrollingElement.scrollTop,
+						],
 					}, '')
 				}
 	
@@ -743,7 +819,9 @@ export class SvelteRouter implements Readable<Router> {
 					{name, params, urlQuery}, '', path,
 				)
 			}
-			this._window.scrollTo({top: 0, left: 0})
+			if (this._scrollingElement) {
+				this._scrollingElement.scrollTo({top: 0, left: 0})
+			}
 		}
 
 		this._dispatchRouteUpdated()
@@ -772,7 +850,6 @@ export class SvelteRouter implements Readable<Router> {
 				return this._setCurrentRoute(
 					path, this._fallback.name,
 					undefined, undefined,
-					this._fallback.replace,
 				)
 			}
 			else throw err
@@ -788,7 +865,7 @@ export class SvelteRouter implements Readable<Router> {
 	}
 
 	public destroy() {
-		this._window.removeEventListener(
+		this._window.removeEventListener<'popstate'>(
 			'popstate', this._onPopState.bind(this),
 		)
 	}
