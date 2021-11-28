@@ -82,6 +82,13 @@ export interface RouterNavigator extends EventTarget {
 	): void
 }
 
+export interface RouterBeforePushArgs {
+	pendingRoute: RouterRouteData,
+	location?:    RouterLocation,
+	resolve:      ()=> void
+	reject:       (newRoute?: RouterRouteData)=> void
+}
+
 enum Char {
 	CapitalA = 'A',
 	CapitalZ = 'Z',
@@ -137,12 +144,7 @@ export type RouterRouteData = {
 	urlQuery?: RouteParams
 }
 
-export type RouterBeforePush = (args: {
-	pendingRoute: RouterRouteData,
-	location?:    RouterLocation,
-	resolve:      ()=> void
-	reject:       (newRoute?: RouterRouteData)=> void
-})=> void
+export type RouterBeforePush = (args: RouterBeforePushArgs)=> void
 
 export type RouterFallback = {
 	name:     string
@@ -236,7 +238,7 @@ export class SvelteRouter implements Readable<Router> {
 			throw new Error('[SvelteRouter] missing routes')
 		}
 		
-		// Check if required window API points exist
+		// Check wether the given window implements the interface
 		if (
 			!conf.window?.location ||
 			!conf.window?.history ||
@@ -245,14 +247,28 @@ export class SvelteRouter implements Readable<Router> {
 			!conf.window?.dispatchEvent
 		) {
 			throw new Error(
-				'[SvelteRouter] invalid window, not implementing required ' +
-				'API points [location, history, addEventListener, ' +
+				'[SvelteRouter] the provided window isn\'t implementing the ' +
+				'interface [location, history, addEventListener, ' +
 				'removeEventListener dispatchEvent]'
 			)
 		}
 		this._window = conf.window
 
 		if (conf.scrollingElement) {
+			// Check wether the given scrollingElement implements the interface
+			if (
+				!conf.scrollingElement.scrollTo ||
+				Number.isNaN(conf.scrollingElement.scrollTop) ||
+				Number.isNaN(conf.scrollingElement.scrollLeft) ||
+				!conf.scrollingElement.addEventListener ||
+				!conf.scrollingElement.removeEventListener
+			) {
+				throw new Error(
+					'[SvelteRouter] the provided scrollingElement isn\'t ' +
+					'implementing the interface [scrollTo, scrollTop, ' +
+					'scrollLeft, addEventListener, removeEventListener]'
+				)
+			}
 			this._scrollingElement = conf.scrollingElement
 		}
 
@@ -480,7 +496,7 @@ export class SvelteRouter implements Readable<Router> {
 	 * @param hook Function
 	 * @returns Function: void
 	 */
-	private removeBeforePush(hookID: string): void {
+	public removeBeforePush(hookID: string): void {
 		const hookIdx = this._beforePushOrder.indexOf(hookID)
 		if (
 			hookIdx < 0 ||
@@ -503,6 +519,11 @@ export class SvelteRouter implements Readable<Router> {
 	public addBeforePushHook(
 		hookID: string, hook: RouterBeforePush,
 	): ()=> void {
+		if (hookID === '') {
+			throw new Error(
+				`[SvelteRouter] invalid before push hook ID (empty)`
+			)
+		}
 		if (this._beforePushOrder.includes(hookID)) {
 			throw new Error(
 				`[SvelteRouter] before push hook by ID "${hookID}" ` +
@@ -738,6 +759,12 @@ export class SvelteRouter implements Readable<Router> {
 				}
 				catch(newRoute) {
 					if (newRoute === undefined) {
+						if (location.name === '') {
+							throw new Error(
+								'unable to handle before push rejection, ' +
+								'no current location is set to fall back to'
+							)
+						}
 						return {
 							name: location.name,
 							path: this.nameToPath(
@@ -865,6 +892,10 @@ export class SvelteRouter implements Readable<Router> {
 	}
 
 	public destroy() {
+		for (const hookID of this._beforePushOrder) {
+			delete this._beforePush[hookID]
+		}
+		this._beforePushOrder = []
 		this._window.removeEventListener<'popstate'>(
 			'popstate', this._onPopState.bind(this),
 		)
