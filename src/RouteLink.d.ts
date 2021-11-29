@@ -2,10 +2,10 @@ import {SvelteComponentTyped} from 'svelte'
 import type {RouteParams} from '.'
 
 declare module 'RouteLink.svelte' {
-	interface RouteLinkProps {
-		to:      string
-		params?: RouteParams
-	}
-	class RouteLinkComponent extends SvelteComponentTyped<RouteLinkProps, {change: CustomEvent<number>}, unknown> {}
+	class RouteLinkComponent extends SvelteComponentTyped<
+		{to: string, params?: RouteParams},
+		unknown,
+		unknown,
+	> {}
 	export default RouteLinkComponent
 }

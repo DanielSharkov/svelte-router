@@ -1,6 +1,9 @@
 [![Simple, fast & easy to use Svelte Router](https://github.com/DanielSharkov/svelte-router/blob/master/readme-banner.svg)](#)
 
-[![Live Demo](https://img.shields.io/badge/▶-Live%20Demo-2962ff)](https://danielsharkov.github.io/svelte-router-examples) [![Examples](https://img.shields.io/badge/🧩-Examples-ff9100)](https://github.com/DanielSharkov/svelte-router-examples) [![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router) ![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
+[![Live Demo](https://img.shields.io/badge/▶-Live%20Demo-2962ff)](https://danielsharkov.github.io/svelte-router-examples)
+[![Examples](https://img.shields.io/badge/🧩-Examples-ff9100)](https://github.com/DanielSharkov/svelte-router-examples)
+[![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router)
+![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
 
 # 🗂 Index
 
@@ -16,6 +19,7 @@
 - [RouteLink Component](#routelink-component)
 	- [RouteLink with Parameters](#routelink-with-parameters)
 - [Svelte Action use:link](#svelte-action-uselink)
+- [Route Transitions](#route-transitions)
 - [Router Examples](#-router-examples)
 
 # 🧗‍♀️ Getting Started
@@ -536,6 +540,94 @@ then leave the parameter `router` blank.
 <a href='/user/lauren/8953' use:link={{router}}>Lauren</a>
 
 <Viewport {router}/>
+```
+
+---
+
+### Route Transitions
+Route transitions can't be just applied and used on a route easily. If you
+would just add some transitions into the route component and navigate through
+the routes, it will show unexpected behavior (see Svelte Issues: [#6779](https://github.com/sveltejs/svelte/issues/6779), [#6763](https://github.com/sveltejs/svelte/issues/6763), [and even including my simple REPL](https://svelte.dev/repl/a5122281148c4c458f40e317fc4be11e?version=3.44.2)).
+
+**But! Dirty hacks to the rescue:** 😎💡
+
+To tell the viewport that a route has a transition you must dispatch the event
+`hasOutro` inside the `onMount` handler. Now that the viewport is aware of the
+outro transition, it's going to await the route to finish its transition,
+before switching to the next route.
+Now that the router is awaiting the outro, at the end of the transition we have
+to tell the viewport that it may switch further to the next route.
+This is done by dispatching the another event called `outroDone`.
+That's the trick!
+
+> ℹ **Info:** Any mistaken dispatched event `outroDone` will be ignored by
+the viewport, as it only listens for the event after the routers location
+has changed. Meaning you may just dispatch this event on every outro
+transition without worring.
+
+> ℹ **Info:** Inside the route component be sure to call the `outroDone` event on the
+longest outro transition on any element inside the component, as they have to finish
+as well. For better understanding see the second example below 👇
+
+> ⚠️ **Warning:** Be sure to fire the event `outroDone` after telling the viewport
+to await the outro transition, otherwise the viewport will wait a indefinitely.
+
+```svelte
+<script lang='ts'>
+	import {onMount, createEventDispatcher} from 'svelte'
+	import {fade} from 'svelte/transition'
+	const dispatch = createEventDispatcher()
+
+	onMount(()=> {
+		dispatch('hasOutro')
+	})
+</script>
+
+<div class='page'
+transition:fade={{duration: 400}}
+on:outroend={()=> dispatch('outroDone')}>
+	<h1>Some content</h1>
+
+	<p>Lorem Impsum...</p>
+</div>
+```
+
+##### A route containing a child transition
+```svelte
+<script lang='ts'>
+	import {onMount, createEventDispatcher} from 'svelte'
+	import {fade, fly} from 'svelte/transition'
+	const dispatch = createEventDispatcher()
+
+	onMount(()=> {
+		dispatch('hasOutro')
+	})
+	
+	const custom =()=> ({
+		duration: 1000,
+		css: (t)=> (
+			`opacity: ${t};` +
+			`transform: rotate(${360 - 360 * t}deg);`
+		)
+	})
+</script>
+
+<!-- You may delay the actual route transition, otherwise it will already
+fade out and the user will see a blank screen, where it's actually is still
+processing a child outro. I set it to 600ms, because 1000ms of the longest
+child transition (the heading) minus the 400ms route transition is a delay of 600ms. -->
+
+<div class='page'
+transition:fade={{duration: 400, delay: 600}}
+on:outroend={()=> dispatch('outroDone')}>
+	<h1 transition:custom>
+		Some content
+	</h1>
+
+	<p style='display: inline-block;' transition:fly={{duration: 700}}>
+		Lorem Impsum...
+	</p>
+</div>
 ```
 
 ---
