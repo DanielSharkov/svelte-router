@@ -1,6 +1,6 @@
 [![Simple, fast & easy to use Svelte Router](https://github.com/DanielSharkov/svelte-router/blob/master/readme-banner.svg)](#)
 
-[![Live Demo](https://img.shields.io/badge/▶-Live%20Demo-2962ff)](https://danielsharkov.github.io/svelte-router-examples) [![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router) ![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
+[![Live Demo](https://img.shields.io/badge/▶-Live%20Demo-2962ff)](https://danielsharkov.github.io/svelte-router-examples) [![Examples](https://img.shields.io/badge/🧩-Examples-ff9100)](https://github.com/DanielSharkov/svelte-router-examples) [![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router) ![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
 
 # 🗂 Index
 
