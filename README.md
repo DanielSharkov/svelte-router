@@ -591,9 +591,9 @@ then leave the parameter `router` blank.
 	import router from './router'
 </script>
 
-<a href='/home' use:link={{router}}>Home</a>
-<a href='/about' use:link={{router}}>About</a>
-<a href='/user/lauren/8953' use:link={{router}}>Lauren</a>
+<a href='/home' use:link={router}>Home</a>
+<a href='/about' use:link={router}>About</a>
+<a href='/user/lauren/8953' use:link={router}>Lauren</a>
 
 <Viewport {router}/>
 ```
