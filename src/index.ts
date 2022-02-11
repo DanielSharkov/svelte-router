@@ -519,6 +519,12 @@ export class SvelteRouter implements Readable<Router> {
 	public addBeforePushHook(
 		hookID: string, hook: RouterBeforePush,
 	): ()=> void {
+		if (typeof hookID !== 'string') {
+			throw new Error(
+				'[SvelteRouter] provided before push hook ID ' +
+				`not of type string (${typeof hookID})`
+			)
+		}
 		if (hookID === '') {
 			throw new Error(
 				`[SvelteRouter] invalid before push hook ID (empty)`
@@ -784,6 +790,7 @@ export class SvelteRouter implements Readable<Router> {
 						)
 					}
 					const nR = newRoute as RouterRouteData
+					console.log('just reject', nR)
 					name = nR.name
 					params = nR.params
 					urlQuery = nR.urlQuery

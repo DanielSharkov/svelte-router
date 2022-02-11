@@ -308,7 +308,9 @@ Simple example of using a hook:
 	import {onDestroy} from 'svelte'
 	import router from './router'
 
+	const testHookID = 'test-hook'
 	const removeBeforePushHook = router.addBeforePushHook(
+		testHookID,
 		({location, pendingRoute, resolve, reject})=> {
 			if (pendingRoute.name === '/very/secret/path') {
 				reject()
@@ -319,6 +321,8 @@ Simple example of using a hook:
 
 	onDestroy(()=> {
 		removeBeforePushHook()
+		// or
+		// router.removeBeforePush(testHookID)
 	})
 </script>
 ```
