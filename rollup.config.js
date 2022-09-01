@@ -2,8 +2,8 @@ import svelte from 'rollup-plugin-svelte';
 import resolve from '@rollup/plugin-node-resolve';
 import {terser} from 'rollup-plugin-terser';
 import typescript from '@rollup/plugin-typescript';
+import pkg from './package.json';
 
-const pkg = require('./package.json');
 export default {
 	input: pkg.source,
 	output: [{
