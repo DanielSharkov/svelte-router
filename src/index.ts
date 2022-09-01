@@ -1,4 +1,5 @@
-import {writable, get as getStore, Readable, Writable} from 'svelte/store'
+import type {Readable} from 'svelte/store'
+import {writable, get as get$} from 'svelte/store'
 import {SvelteComponent, tick, getContext} from 'svelte'
 
 export {default as Viewport} from './Viewport.svelte'
@@ -13,12 +14,16 @@ export interface RouterWindowLocation {
 	search: string
 }
 
+export type HistoryState = RouterRouteData & {
+	scroll?: [number, number]
+}
+
 export interface RouterWindowHistory {
-	readonly state: any
+	readonly state: HistoryState
 	back(): void
 	forward(): void
-	pushState(data: any, unused: string, url?: string | URL | null): void
-	replaceState(data: any, unused: string, url?: string | URL | null): void
+	pushState(data: HistoryState, unused: string, url?: string | URL | null): void
+	replaceState(data: HistoryState, unused: string, url?: string | URL | null): void
 }
 
 export interface RouterScrollingElement {
@@ -30,7 +35,7 @@ export interface RouterScrollingElement {
 
 	addEventListener<K extends keyof RouterNavigatorEventMap>(
 		type: K,
-		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => void,
 		options?: boolean | AddEventListenerOptions,
 	): void
 	addEventListener(
@@ -41,7 +46,7 @@ export interface RouterScrollingElement {
 
 	removeEventListener<K extends keyof RouterNavigatorEventMap>(
 		type: K,
-		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => void,
 		options?: boolean | EventListenerOptions,
 	): void
 	removeEventListener(
@@ -61,7 +66,7 @@ export interface RouterNavigator extends EventTarget {
 
 	addEventListener<K extends keyof RouterNavigatorEventMap>(
 		type: K,
-		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => void,
 		options?: boolean | AddEventListenerOptions,
 	): void
 	addEventListener(
@@ -72,7 +77,7 @@ export interface RouterNavigator extends EventTarget {
 
 	removeEventListener<K extends keyof RouterNavigatorEventMap>(
 		type: K,
-		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => any,
+		listener: (this: SvelteRouter, ev: RouterNavigatorEventMap[K]) => void,
 		options?: boolean | EventListenerOptions,
 	): void
 	removeEventListener(
@@ -128,7 +133,7 @@ export type RouterLocation = {
 	params?:    RouteParams
 	urlQuery?:  RouteParams
 	component?: typeof SvelteComponent
-	props?:     any // eslint-disable-line
+	props?:     unknown
 }
 
 export type RouterActualRoute = {
@@ -160,7 +165,7 @@ export interface RouterConfig {
 	routes:             {[routeName: string]: {
 		path:      string
 		component: typeof SvelteComponent
-		props?:    any // eslint-disable-line
+		props?:    unknown
 	}}
 }
 
@@ -172,7 +177,7 @@ type PathTemplate = {
 export type RouterRoute = {
 	path:      PathTemplate
 	component: typeof SvelteComponent
-	props:     any // eslint-disable-line
+	props:     unknown
 }
 
 type Router_Index = {
@@ -199,7 +204,7 @@ export type Router = {
 // Svelte Router implementation ::::::::::::::::::::::::::::::::::::::::::::::::
 
 export class SvelteRouter implements Readable<Router> {
-	#store: Writable<Router> = writable({
+	#store = writable<Router>({
 		isLoading: true,
 		routes: {},
 		location: {
@@ -213,7 +218,7 @@ export class SvelteRouter implements Readable<Router> {
 	})
 	public readonly subscribe = this.#store.subscribe
 
-	#internalStore: Writable<Router_Internal> = writable({
+	#internalStore = writable<Router_Internal>({
 		routes: {},
 		index: {
 			name: '',
@@ -389,7 +394,7 @@ export class SvelteRouter implements Readable<Router> {
 		if (err !== null) throw err
 
 		this.#store.update(($rtrStr)=> {
-			const routes = getStore(this.#internalStore).routes
+			const routes = get$(this.#internalStore).routes
 			for (const routeName in routes) {
 				$rtrStr.routes[routeName] = routes[routeName]
 			}
@@ -437,7 +442,7 @@ export class SvelteRouter implements Readable<Router> {
 		this._window.dispatchEvent(
 			new CustomEvent(
 				this._routeUpdatedEventName,
-				{detail: getStore(this.#store).location},
+				{detail: get$(this.#store).location},
 			)
 		)
 	}
@@ -557,7 +562,7 @@ export class SvelteRouter implements Readable<Router> {
 			'missing parameter name'
 		)
 
-		const route = getStore(this.#internalStore).routes[routeName]
+		const route = get$(this.#internalStore).routes[routeName]
 		if (!route) throw new Error(
 			`route "${routeName}" not found`
 		)
@@ -592,7 +597,7 @@ export class SvelteRouter implements Readable<Router> {
 	public getRoute(url: string): RouterRouteData {
 		const {pathTokens, urlQuery} = parseURLPath(url)
 
-		let currentNode = getStore(this.#internalStore).index
+		let currentNode = get$(this.#internalStore).index
 		const params: {[token: string]: string} = {}
 
 		if (pathTokens.length === 0 && !this._basePath) {
@@ -708,7 +713,7 @@ export class SvelteRouter implements Readable<Router> {
 	public nameToPath(
 		routeName: string, params?: RouteParams, urlQuery?: RouteParams,
 	): string {
-		const routes = getStore(this.#internalStore).routes
+		const routes = get$(this.#internalStore).routes
 		if (
 			typeof routeName !== 'string' || routeName === '' ||
 			!(routeName in routes)
@@ -716,7 +721,7 @@ export class SvelteRouter implements Readable<Router> {
 			throw new Error(`invalid route name: '${routeName}'`)
 		}
 		return this.stringifyRouteToURL(
-			getStore(this.#internalStore).routes[routeName].path,
+			get$(this.#internalStore).routes[routeName].path,
 			params,
 			urlQuery,
 		)
@@ -749,7 +754,7 @@ export class SvelteRouter implements Readable<Router> {
 
 		if (this._beforePushOrder.length > 0) {
 			const location: RouterLocation = (
-				getStore(this.#store).location
+				get$(this.#store).location
 			)
 
 			for (const hookID of this._beforePushOrder) {
