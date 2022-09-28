@@ -873,6 +873,8 @@ export class SvelteRouter implements Readable<Router> {
 		let urlQuery: RouteParams|undefined
 		if (typeof rawUrlQuery === 'string') {
 			urlQuery = parseUrlQuery(rawUrlQuery)
+		} else {
+			urlQuery = rawUrlQuery
 		}
 		return this._setCurrentRoute('', name, params, urlQuery)
 	}
