@@ -1,6 +1,6 @@
 {
   "name": "@danielsharkov/svelte-router",
-  "version": "3.0.3",
+  "version": "3.1.4",
   "description": "A simple, fast and easy to use svelte router.",
   "license": "MIT",
   "keywords": [
@@ -27,7 +27,7 @@
     {
       "name": "Daniel Sharkov",
       "email": "scharktv@gmail.com",
-      "url": "https://danielsharkov.github.io/danielsharkov_com"
+      "url": "https://danielsharkov.com"
     }
   ],
   "publishConfig": {

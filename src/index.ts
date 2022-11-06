@@ -127,13 +127,21 @@ enum Char {
 
 export type RouteParams = {[key: string]: string}
 
+export type LazyComponent = {
+	fallback?: typeof SvelteComponent
+	loading?:  typeof SvelteComponent
+	component: ()=> Promise<typeof SvelteComponent>
+	fetched:   boolean
+}
+
 export type RouterLocation = {
-	path:       string
-	name:       string
-	params?:    RouteParams
-	urlQuery?:  RouteParams
-	component?: typeof SvelteComponent
-	props?:     unknown
+	path:           string
+	name:           string
+	params?:        RouteParams
+	urlQuery?:      RouteParams
+	lazyComponent?: LazyComponent
+	component?:     typeof SvelteComponent
+	props?:         unknown
 }
 
 export type RouterActualRoute = {
@@ -162,10 +170,16 @@ export interface RouterConfig {
 	basePath?:          string
 	beforePush?:        RouterBeforePush
 	fallback?:          RouterFallback
-	routes:             {[routeName: string]: {
-		path:      string
-		component: typeof SvelteComponent
-		props?:    unknown
+
+	routes: {[routeName: string]: {
+		path:           string
+		component?:     typeof SvelteComponent
+		lazyComponent?: {
+			fallback?: LazyComponent['fallback']
+			loading?:  LazyComponent['loading']
+			component: LazyComponent['component']
+		}
+		props?:         unknown
 	}}
 }
 
@@ -175,17 +189,19 @@ type PathTemplate = {
 }
 
 export type RouterRoute = {
-	path:      PathTemplate
-	component: typeof SvelteComponent
-	props:     unknown
+	path:           PathTemplate
+	component:      typeof SvelteComponent | null
+	lazyComponent?: LazyComponent
+	props:          unknown
 }
 
 type Router_Index = {
-	name:       string
-	token:      string
-	param?:     Router_Index
-	component?: typeof SvelteComponent
-	routes:     {[token: string]: Router_Index}
+	name:           string
+	token:          string
+	param?:         Router_Index
+	component?:     typeof SvelteComponent
+	lazyComponent?: LazyComponent
+	routes:         {[token: string]: Router_Index}
 }
 
 type Router_Internal = {
@@ -213,6 +229,7 @@ export class SvelteRouter implements Readable<Router> {
 			params: undefined,
 			urlQuery: undefined,
 			component: undefined,
+			lazyComponent: undefined,
 			props: undefined,
 		},
 	})
@@ -334,10 +351,40 @@ export class SvelteRouter implements Readable<Router> {
 					err = new Error(`duplicate of route "${routeName}"`)
 					return $intStr
 				}
+
+				if (
+					route.component === undefined &&
+					route.lazyComponent === undefined
+				) {
+					err = new Error(
+						'missing route component ' +
+						`(on route "${routeName}", "${route.path}")`
+					)
+					return $intStr
+				}
+				if (route.component && route.lazyComponent) {
+					err = new Error(
+						'cannot use component and lazyComponent ' +
+						`(on route "${routeName}", "${route.path}")`
+					)
+					return $intStr
+				}
 				$intStr.routes[routeName] = {
-					path:      path,
-					component: route.component,
-					props:     route.props,
+					path: path,
+					component: (
+						route.component !== undefined ?
+						route.component
+						: route.lazyComponent?.loading !== undefined ? (
+							route.lazyComponent.loading
+						) : null
+					),
+					lazyComponent: (route.lazyComponent !== undefined ? {
+						component: route.lazyComponent.component,
+						loading: route.lazyComponent?.loading,
+						fallback: route.lazyComponent?.fallback,
+						fetched: false,
+					}: undefined),
+					props:         route.props,
 				}
 
 				let currentNode = $intStr.index
@@ -387,7 +434,12 @@ export class SvelteRouter implements Readable<Router> {
 						}
 					}
 				}
-				currentNode.component = $intStr.routes[routeName].component
+				currentNode.component = (
+					$intStr.routes[routeName].component !== null ?
+					$intStr.routes[routeName].component as typeof SvelteComponent
+					: undefined
+				)
+				currentNode.lazyComponent = $intStr.routes[routeName].lazyComponent
 			}
 			return $intStr
 		})
@@ -630,7 +682,7 @@ export class SvelteRouter implements Readable<Router> {
 
 			// is last token
 			if (level+1 >= pathTokens.length) {
-				if (currentNode.component) {
+				if (currentNode.component || currentNode.lazyComponent) {
 					return {
 						name: currentNode.name,
 						params: params || undefined,
@@ -812,6 +864,89 @@ export class SvelteRouter implements Readable<Router> {
 			path = this.stringifyRouteToURL(route.path, params, urlQuery)
 		}
 
+		if (route.lazyComponent !== undefined && !route.lazyComponent.fetched) {
+			route.lazyComponent.component().then((comp)=> {
+				this.#internalStore.update(($intStr)=> {
+					// This ugly variable assignment and the else is required,
+					// so the TS  linter keeps calm. For some reason it panics,
+					// that "lazyComponent" might be undefined.
+					const r = $intStr.routes[name]
+					if (r.lazyComponent !== undefined) {
+						r.component = comp
+						r.lazyComponent.fetched = true
+					} else {
+						err = Error(
+							'[SvelteRouter] unexpected, component lazy ' +
+							'loaded but route isn\'t internally existing.'
+						)
+					}
+
+					function resolveRouteIndex(
+						node: Router_Index,
+						name: string,
+						comp: typeof SvelteComponent,
+					) {
+						if (node.name === name) {
+							node.component = comp
+							return true
+						}
+						for (const token in node.routes) {
+							if (resolveRouteIndex(
+								node.routes[token], name, comp,
+							)) {
+								return true
+							}
+						}
+						return false
+					}
+					resolveRouteIndex($intStr.index, name, comp)
+
+					return $intStr
+				})
+				let err: Error|null = null
+				this.#store.update(($rtrStr)=> {
+					// This ugly variable assignment and the else is required,
+					// so the TS linter keeps calm. For some reason it panics,
+					// that "lazyComponent" might be undefined.
+					const r = $rtrStr.routes[name]
+					if (r.lazyComponent !== undefined) {
+						r.component = comp
+						r.lazyComponent.fetched = true
+					} else {
+						err = Error(
+							'[SvelteRouter] unexpected, component lazy ' +
+							'loaded but route isn\'t internally existing.'
+						)
+					}
+					if ($rtrStr.location.name === name) {
+						$rtrStr.location.component = comp
+					}
+					return $rtrStr
+				})
+				if (err !== null) {
+					throw new Error(err)
+				}
+				return
+			}).catch((err)=> {
+				this.#store.update(($rtrStr)=> {
+					// This ugly variable assignment is required, so the TS
+					// linter keeps calm. For some reason it panics, that
+					// "lazyComponent" might be undefined.
+					const r = $rtrStr.routes[name]
+					if (
+						$rtrStr.location.name === name &&
+						r.lazyComponent?.fallback !== undefined
+					) {
+						$rtrStr.location.component = r.lazyComponent.fallback
+					}
+					return $rtrStr
+				})
+				console.error(
+					`[SvelteRouter] failed to lazy load route "${name}": ${err}`
+				)
+			})
+		}
+
 		// Update store
 		this.#store.update(($rtrStr)=> {
 			$rtrStr.isLoading = false
@@ -820,7 +955,10 @@ export class SvelteRouter implements Readable<Router> {
 				path,
 				params,
 				urlQuery,
-				component: route.component,
+				component: (
+					route.component !== null ? route.component : undefined
+				),
+				lazyComponent: route.lazyComponent,
 				props: route.props,
 			}
 			return $rtrStr

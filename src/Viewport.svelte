@@ -14,13 +14,13 @@
 	import {setContext, tick} from 'svelte'
 	export let router
 
-	setContext('svelte_router', router)
-
 	if (!router || !router.subscribe) {
 		throw new Error(
 			'[SvelteRouter] <RouterViewport> is missing a router instance'
 		)
 	}
+
+	setContext('svelte_router', router)
 
 	let viewHasOutro = false
 	function hasOutro() {
@@ -29,7 +29,6 @@
 	function outroDone() {
 		if (!isActualView) {
 			viewHasOutro = false
-			updateView()
 		}
 	}
 
@@ -58,6 +57,6 @@
 
 	async function updateView() {
 		await tick()
-		current = $router.location
+		current = {...$router.location}
 	}
 </script>
