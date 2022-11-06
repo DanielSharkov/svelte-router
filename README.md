@@ -4,6 +4,7 @@
 [![Examples](https://img.shields.io/badge/🧩-Examples-ff9100)](https://github.com/DanielSharkov/svelte-router-examples)
 [![npm version](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router.svg)](https://badge.fury.io/js/@danielsharkov%2Fsvelte-router)
 ![GitHub](https://img.shields.io/github/license/danielsharkov/svelte-router)
+[![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/TheComputerM/awesome-svelte#readme)
 
 # 🗂 Index
 
