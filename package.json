@@ -28,7 +28,7 @@
     {
       "name": "Daniel Sharkov",
       "email": "scharktv@gmail.com",
-      "url": "https://danielsharkov.com"
+      "url": "https://daniel-scharkov.engineer"
     }
   ],
   "publishConfig": {
@@ -41,6 +41,7 @@
   "module": "src/router.mjs",
   "svelte": "src/index.js",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "build": "rollup -c",
     "lint": "eslint \"src/*.ts\""
   },
