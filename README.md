@@ -21,6 +21,7 @@
 	- [RouteLink with Parameters](#routelink-with-parameters)
 - [Svelte Action use:link](#svelte-action-uselink)
 - [Route Transitions](#route-transitions)
+- [Lazy loading](#lazy-loading)
 - [Router Examples](#-router-examples)
 
 <br>
@@ -29,7 +30,15 @@
 
 ## 💿 Installation
 
-Just `npm i --save-dev @danielsharkov/svelte-router` and done 😁 🎉
+Depending on your package manager just:
+
+PNPM `pnpm add -D @danielsharkov/svelte-router`
+
+YARN `yarn add --dev @danielsharkov/svelte-router`
+
+NPM `npm i -D @danielsharkov/svelte-router`
+
+And done 😁 🎉
 
 <br>
 
@@ -40,8 +49,9 @@ ever you like, maybe even inside `App.svelte` as a module - it's up to you.
 
 ```ts
 import {SvelteRouter} from '@danielsharkov/svelte-router'
-import ViewHome from './views/Home'
-import ViewUser from './views/User'
+import ViewHome from './views/Home.svelte'
+import ViewUser from './views/User.svelte'
+import ViewAlbum from './views/Album.svelte'
 
 export default new SvelteRouter({
 	window: window,
@@ -61,7 +71,7 @@ export default new SvelteRouter({
 		'user.album': {
 			// paths may take multiple parameters
 			path: '/users/:uid/albums/:aid',
-			component: ViewUser,
+			component: ViewAlbum,
 		},
 	},
 })
@@ -92,8 +102,8 @@ passing it your created router instance:
 
 ```svelte
 <script lang='ts'>
-	import {Viewport} from '@danielsharkov/svelte-router'
-	import router from './router'
+import {Viewport} from '@danielsharkov/svelte-router'
+import router from './router'
 </script>
 
 <nav>
@@ -103,9 +113,7 @@ passing it your created router instance:
 	<button on:click={router.push('home', {uid: 'paul'})}>
 		Paul
 	</button>
-	<button on:click={router.push('home', {
-		userId: 'alex', albumId: 'sumer-2016',
-	})}>
+	<button on:click={router.push('home', {userId: 'alex', albumId: 'sumer-2016'})}>
 		Bob
 	</button>
 </nav>
@@ -124,8 +132,8 @@ passing it your created router instance:
 
 ```ts
 import {SvelteRouter} from '@danielsharkov/svelte-router'
-import ViewHome from './views/Home'
-import ViewNotFound from './views/NotFound'
+import ViewHome from './views/Home.svelte'
+import ViewNotFound from './views/NotFound.svelte'
 
 export default new SvelteRouter({
 	window,
@@ -166,32 +174,35 @@ and `props`.
 
 ```svelte
 <script lang='ts'>
-	export let router
-	// router: is the SvelteRouter instance you have provided to <Viewport>
-	export let params
-	// params: is either undefined or the parameters you have defined
-	// in the path template for this route in the router config.
-	export let urlQuery
-	// urlQuery: is either undefined or a key:value object depending whether
-	// the URL has any query parameters.
-	export let props
-	// props: is either undefined or the defined props for this route
-	// in the router config.
+export let router
+// router: is the SvelteRouter instance you have provided to <Viewport>
 
-	// We assume that the route parameters always exist, because we defined
-	// them parameters in the path template for this route in the router config -
-	// and they do always exist, because the router won't route on a route
-	// missing its parameters.
-	// You can may access these values without worry of trying to access an
-	// undefined property.
-	console.log(params.someParam)
+export let params
+// params: is either undefined or the parameters you have defined
+// in the path template for this route in the router config.
 
-	// Same follows for props, they are hard-coded and therefore always defined.
-	console.log(props.nav.title)
+export let urlQuery
+// urlQuery: is either undefined or a key:value object depending whether
+// the URL has any query parameters.
 
-	// Only the urlQuery keys must be checked first, because there's is no
-	// definition for the URL query.
-	if (urlQuery.search) console.log(search)
+export let props
+// props: is either undefined or the defined props for this route
+// in the router config.
+
+// We assume that the route parameters always exist, because we defined
+// them parameters in the path template for this route in the router config -
+// and they do always exist, because the router won't route on a route
+// missing its parameters.
+// You can may access these values without worry of trying to access an
+// undefined property.
+console.log(params.someParam)
+
+// Same follows for props, they are hard-coded and therefore always defined.
+console.log(props.nav.title)
+
+// Only the urlQuery keys must be checked first, because there's is no
+// definition for the URL query.
+if (urlQuery.search) console.log(search)
 </script>
 
 <!-- Here your Layout & Styles ... -->
@@ -212,8 +223,8 @@ component:
 <sub>**router.ts**</sub>
 ```ts
 import {SvelteRouter} from '@danielsharkov/svelte-router'
-import ViewHome from './views/Home'
-import ViewAbout from './views/About'
+import ViewHome from './views/Home.svelte'
+import ViewAbout from './views/About.svelte'
 
 export default new SvelteRouter({
 	window,
@@ -250,7 +261,7 @@ export default new SvelteRouter({
 
 ```svelte
 <script lang='ts'>
-	export let props
+export let props
 </script>
 
 <!-- We assume that these props always exist,
@@ -263,7 +274,7 @@ because we hard-code them into the router -->
 
 ```svelte
 <script lang='ts'>
-	import router from './router'
+import router from './router'
 </script>
 
 <nav>
@@ -306,25 +317,25 @@ Simple example of using a hook:
 
 ```svelte
 <script>
-	import {onDestroy} from 'svelte'
-	import router from './router'
+import {onDestroy} from 'svelte'
+import router from './router'
 
-	const testHookID = 'test-hook'
-	const removeBeforePushHook = router.addBeforePushHook(
-		testHookID,
-		({location, pendingRoute, resolve, reject})=> {
-			if (pendingRoute.name === '/very/secret/path') {
-				reject()
-			}
-			resolve()
+const testHookID = 'test-hook'
+const removeBeforePushHook = router.addBeforePushHook(
+	testHookID,
+	({location, pendingRoute, resolve, reject})=> {
+		if (pendingRoute.name === '/very/secret/path') {
+			reject()
 		}
-	)
+		resolve()
+	}
+)
 
-	onDestroy(()=> {
-		removeBeforePushHook()
-		// or
-		// router.removeBeforePush(testHookID)
-	})
+onDestroy(()=> {
+	removeBeforePushHook()
+	// or
+	// router.removeBeforePush(testHookID)
+})
 </script>
 ```
 
@@ -343,14 +354,14 @@ Here's a simple example:
 
 ```ts
 import {SvelteRouter} from '@danielsharkov/svelte-router'
-import {get as getStore} from 'svelte/store'
+import {get as get$} from 'svelte/store'
 import {isValidUserSession} from 'user_session'
 // isValidSession could be any of your implementations - in this example it is
 // just a derived store returning false or true
 
-import ViewLogin from './views/Login'
-import ViewHome from './views/Home'
-import ViewUser from './views/User'
+import ViewLogin from './views/Login.svelte'
+import ViewHome from './views/Home.svelte'
+import ViewUser from './views/User.svelte'
 
 export default new SvelteRouter({
 	window,
@@ -375,7 +386,7 @@ export default new SvelteRouter({
 		}
 	},
 	beforePush({pendingRoute, location, resolve, reject}) {
-		if (!getStore(isValidUserSession)) {
+		if (!get$(isValidUserSession)) {
 			reject({name: 'login'})
 		} else if (pendingRoute.name === 'login') {
 			reject()
@@ -415,7 +426,8 @@ To programmatically go back or forward in history just use the [browser history 
 
 ```svelte
 <script lang='ts'>
-	export let router
+import type {SvelteRouter} from '@danielsharkov/svelte-router'
+export let router: SvelteRouter
 </script>
 
 <button on:click={router.back}>Back</button>
@@ -428,7 +440,8 @@ with the parameter values:
 
 ```svelte
 <script lang='ts'>
-	export let router
+import type {SvelteRouter} from '@danielsharkov/svelte-router'
+export let router: SvelteRouter
 </script>
 
 <button on:click={()=> router.push('home')}>
@@ -482,9 +495,9 @@ passing it the router instance. You may pass HTML tag attributes like `class`,
 <sub>**router.ts**</sub>
 ```ts
 import {SvelteRouter} from '@danielsharkov/svelte-router'
-import ViewHome from './views/Home'
-import ViewAbout from './views/About'
-import ViewUser from './views/User'
+import ViewHome from './views/Home.svelte'
+import ViewAbout from './views/About.svelte'
+import ViewUser from './views/User.svelte'
 
 export default new SvelteRouter({
 	window,
@@ -523,8 +536,8 @@ export default new SvelteRouter({
 <sub>**components/Nav.svelte**</sub>
 ```svelte
 <script>
-	import {RouteLink} from '@danielsharkov/svelte-router'
-	import router from '../router'
+import {RouteLink} from '@danielsharkov/svelte-router'
+import router from '../router'
 </script>
 
 <nav>
@@ -540,9 +553,9 @@ export default new SvelteRouter({
 
 <!-- The only disadvantage is that you have to define the styles globally -->
 <style>
-	:global(.nav-btn) {
-		color: #ff3e00;
-	}
+:global(.nav-btn) {
+	color: #ff3e00;
+}
 </style>
 ```
 
@@ -569,7 +582,7 @@ then leave the parameter `router` blank.
 ##### Inside a `<Viewport>`
 ```svelte
 <script>
-	import {link} from '@danielsharkov/svelte-router'
+import {link} from '@danielsharkov/svelte-router'
 </script>
 
 <a href='/home' use:link class:active={$router.location === 'home'}>
@@ -583,17 +596,17 @@ then leave the parameter `router` blank.
 </a>
 
 <style>
-	a.active {
-		color: #ff3e00;
-	}
+a.active {
+	color: #ff3e00;
+}
 </style>
 ```
 
 ##### Outside a `<Viewport>`
 ```svelte
 <script>
-	import {Viewport, link} from '@danielsharkov/svelte-router'
-	import router from './router'
+import {Viewport, link} from '@danielsharkov/svelte-router'
+import router from './router'
 </script>
 
 <a href='/home' use:link={router}>Home</a>
@@ -645,13 +658,13 @@ Be sure to fire the event `outroDone` after telling the viewport to await the ou
 
 ```svelte
 <script lang='ts'>
-	import {onMount, createEventDispatcher} from 'svelte'
-	import {fade} from 'svelte/transition'
-	const dispatch = createEventDispatcher()
+import {onMount, createEventDispatcher} from 'svelte'
+import {fade} from 'svelte/transition'
+const dispatch = createEventDispatcher()
 
-	onMount(()=> {
-		dispatch('hasOutro')
-	})
+onMount(()=> {
+	dispatch('hasOutro')
+})
 </script>
 
 <div class='page'
@@ -666,21 +679,21 @@ on:outroend={()=> dispatch('outroDone')}>
 ##### A route containing a child transition
 ```svelte
 <script lang='ts'>
-	import {onMount, createEventDispatcher} from 'svelte'
-	import {fade, fly} from 'svelte/transition'
-	const dispatch = createEventDispatcher()
+import {onMount, createEventDispatcher} from 'svelte'
+import {fade, fly} from 'svelte/transition'
+const dispatch = createEventDispatcher()
 
-	onMount(()=> {
-		dispatch('hasOutro')
-	})
-	
-	const custom =()=> ({
-		duration: 1000,
-		css: (t)=> (
-			`opacity: ${t};` +
-			`transform: rotate(${360 - 360 * t}deg);`
-		)
-	})
+onMount(()=> {
+	dispatch('hasOutro')
+})
+
+const custom =()=> ({
+	duration: 1000,
+	css: (t)=> (
+		`opacity: ${t};` +
+		`transform: rotate(${360 - 360 * t}deg);`
+	)
+})
 </script>
 
 <!-- You may delay the actual route transition, otherwise it will already
@@ -699,6 +712,75 @@ on:outroend={()=> dispatch('outroDone')}>
 		Lorem Impsum...
 	</p>
 </div>
+```
+
+
+<br>
+
+--------------------------------------------------------------------------------
+<br>
+
+
+# 🥱 Lazy loading
+To lazy load components you would need to set the field `lazyComponent` instead
+of `component`. The router will panic when using both, as it makes no sense.
+You may even provide a `loading` and `fallback` component, which act like a
+regular route component, meaning they [can be smoothly transitioned](#route-transitions) as well.
+
+```ts
+import {SvelteRouter} from '@danielsharkov/svelte-router'
+import RouteLoading from './components/RouteLoading.svelte'
+import RouteLoadFailedFallback from './components/RouteLoadFailedFallback.svelte'
+
+import ViewHome from './views/Home.svelte'
+import ViewNotFound from './views/NotFound.svelte'
+
+export default new SvelteRouter({
+	window: window,
+	scrollingElement: window.document.scrollingElement,
+	routes: {
+		'home': {
+			path: '/',
+			component: ViewHome,
+		},
+		'users.user': {
+			path: '/users/:uid',
+			lazyComponent: {
+				// lazy load and show this component:
+				component: async ()=> (await import('./views/User.svelte')).default,
+				// when the actual route component is loading show:
+				loading: RouteLoading,
+				// in case it fails loading the component show:
+				fallback: RouteLoadFailedFallback,
+			},
+		},
+		'user.album': {
+			path: '/users/:uid/albums/:aid',
+			lazyComponent: {
+				component: async ()=> (await import('./views/Album.svelte')).default,
+				loading: RouteLoading,
+				fallback: RouteLoadFailedFallback,
+			},
+		},
+		// this route below will never load, it would always first show the
+		// loading and then the fallback component after 2 seconds
+		'will-never-load': {
+			path: '/users/:uid/albums/:aid',
+			lazyComponent: {
+				component: async ()=> new Promise((_, reject)=> setTimeout(reject, 2e3)),
+				loading: RouteLoading,
+				fallback: RouteLoadFailedFallback,
+			},
+		},
+		'404': {
+			path: '/404',
+			// This component mustn't be lazy loaded, as it makes no sense.
+			// Still though it's possible.
+			component: ViewNotFound,
+		},
+	},
+	fallback: {name: '404'},
+})
 ```
 
 
