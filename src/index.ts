@@ -6,6 +6,10 @@ export {default as Viewport} from './Viewport.svelte'
 export {default as RouteLink} from './RouteLink.svelte'
 
 
+function _prefixErr(msg: string) {
+	return new Error('[SvelteRouter] ' + msg)
+}
+
 
 // Type Definitionzs ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -257,7 +261,7 @@ export class SvelteRouter implements Readable<Router> {
 
 	constructor(conf: RouterConfig) {
 		if (!conf.routes || Object.keys(conf.routes).length < 1) {
-			throw new Error('[SvelteRouter] missing routes')
+			throw _prefixErr('missing routes')
 		}
 		
 		// Check wether the given window implements the interface
@@ -268,8 +272,8 @@ export class SvelteRouter implements Readable<Router> {
 			!conf.window.removeEventListener ||
 			!conf.window?.dispatchEvent
 		) {
-			throw new Error(
-				'[SvelteRouter] the provided window isn\'t implementing the ' +
+			throw _prefixErr(
+				'the provided window isn\'t implementing the ' +
 				'interface [location, history, addEventListener, ' +
 				'removeEventListener dispatchEvent]'
 			)
@@ -285,8 +289,8 @@ export class SvelteRouter implements Readable<Router> {
 				!conf.scrollingElement.addEventListener ||
 				!conf.scrollingElement.removeEventListener
 			) {
-				throw new Error(
-					'[SvelteRouter] the provided scrollingElement isn\'t ' +
+				throw _prefixErr(
+					'the provided scrollingElement isn\'t ' +
 					'implementing the interface [scrollTo, scrollTop, ' +
 					'scrollLeft, addEventListener, removeEventListener]'
 				)
@@ -311,7 +315,7 @@ export class SvelteRouter implements Readable<Router> {
 				this._basePath = parsePathTemplate(conf.basePath)
 			}
 			catch(err) {
-				throw new Error(
+				throw _prefixErr(
 					`the base URL defines an invalid path template: ${err}`
 				)
 			}
@@ -329,7 +333,7 @@ export class SvelteRouter implements Readable<Router> {
 	
 				// Ensure route name uniqueness
 				if (routeName in $intStr.routes) {
-					err = new Error(`redeclaration of route "${routeName}"`)
+					err = _prefixErr(`redeclaration of route "${routeName}"`)
 					return $intStr
 				}
 
@@ -339,7 +343,7 @@ export class SvelteRouter implements Readable<Router> {
 					path = parsePathTemplate(pathTemplate)
 				}
 				catch(tplErr) {
-					err = new Error(
+					err = _prefixErr(
 						`route "${routeName}" defines an invalid path ` +
 						`template: ${tplErr}`
 					)
@@ -348,7 +352,7 @@ export class SvelteRouter implements Readable<Router> {
 
 				// Ensure path template uniqueness
 				if (routeName in $intStr.routes) {
-					err = new Error(`duplicate of route "${routeName}"`)
+					err = _prefixErr(`duplicate of route "${routeName}"`)
 					return $intStr
 				}
 
@@ -356,14 +360,14 @@ export class SvelteRouter implements Readable<Router> {
 					route.component === undefined &&
 					route.lazyComponent === undefined
 				) {
-					err = new Error(
+					err = _prefixErr(
 						'missing route component ' +
 						`(on route "${routeName}", "${route.path}")`
 					)
 					return $intStr
 				}
 				if (route.component && route.lazyComponent) {
-					err = new Error(
+					err = _prefixErr(
 						'cannot use component and lazyComponent ' +
 						`(on route "${routeName}", "${route.path}")`
 					)
@@ -509,7 +513,7 @@ export class SvelteRouter implements Readable<Router> {
 				this._fallback.replace, true,
 			)
 		}
-		throw new Error('unexpected: fallback not set')
+		throw _prefixErr('unexpected: fallback not set')
 	}
 
 	private async _onPopState(event: PopStateEvent): Promise<void> {
@@ -540,7 +544,7 @@ export class SvelteRouter implements Readable<Router> {
 			await this._setRouteFallback()
 		}
 		// panic, router can't handle history state
-		else throw new Error(
+		else throw _prefixErr(
 			`unexpected history state: ${JSON.stringify(event.state)}`
 		)
 	}
@@ -559,9 +563,9 @@ export class SvelteRouter implements Readable<Router> {
 			hookIdx < 0 ||
 			(this._globalBeforePushHookID &&
 			this._globalBeforePushHookID === hookID)
-		) throw new Error(
-			`[SvelteRouter] hook by ID "${hookID}" not subscribed`
-		)
+		) {
+			throw _prefixErr(`hook by ID "${hookID}" not subscribed`)
+		}
 		delete this._beforePush[hookID]
 		this._beforePushOrder.splice(hookIdx, 1)
 	}
@@ -577,19 +581,17 @@ export class SvelteRouter implements Readable<Router> {
 		hookID: string, hook: RouterBeforePush,
 	): ()=> void {
 		if (typeof hookID !== 'string') {
-			throw new Error(
-				'[SvelteRouter] provided before push hook ID ' +
+			throw _prefixErr(
+				'provided before push hook ID ' +
 				`not of type string (${typeof hookID})`
 			)
 		}
 		if (hookID === '') {
-			throw new Error(
-				`[SvelteRouter] invalid before push hook ID (empty)`
-			)
+			throw _prefixErr(`invalid before push hook ID (empty)`)
 		}
 		if (this._beforePushOrder.includes(hookID)) {
-			throw new Error(
-				`[SvelteRouter] before push hook by ID "${hookID}" ` +
+			throw _prefixErr(
+				`before push hook by ID "${hookID}" ` +
 				`is already existing`
 			)
 		}
@@ -610,27 +612,26 @@ export class SvelteRouter implements Readable<Router> {
 	public verifyNameAndParams(
 		routeName: string, params?: RouteParams,
 	): RouterRoute {
-		if (!routeName) throw new Error(
-			'missing parameter name'
-		)
+		if (!routeName) {
+			throw _prefixErr('missing parameter name')
+		}
 
 		const route = get$(this.#internalStore).routes[routeName]
-		if (!route) throw new Error(
-			`route "${routeName}" not found`
-		)
+		if (!route) {
+			throw _prefixErr(`route "${routeName}" not found`)
+		}
 
 		const paramNames = route.path.params
 		if (paramNames.length > 0) {
-			if (!params) throw new Error(
+			if (!params) throw _prefixErr(
 				`missing parameters [${paramNames}] ` +
 				`for route "${routeName}"`
 			)
 
 			// Parameters expected
 			for (const paramName of route.path.params) {
-				if (!(paramName in params)) throw new Error(
-					`missing parameter "${paramName}" ` +
-					`for route "${routeName}"`
+				if (!(paramName in params)) throw _prefixErr(
+					`missing parameter "${paramName}" for route "${routeName}"`
 				)
 			}
 		}
@@ -654,7 +655,7 @@ export class SvelteRouter implements Readable<Router> {
 
 		if (pathTokens.length === 0 && !this._basePath) {
 			if (!currentNode.name) {
-				throw new Error(`URL "${url}" doesn't resolve any route`)
+				throw _prefixErr(`URL "${url}" doesn't resolve any route`)
 			}
 			return {name: currentNode.name}
 		}
@@ -675,7 +676,7 @@ export class SvelteRouter implements Readable<Router> {
 					currentNode = currentNode.param
 					params[currentNode.token] = token
 				}
-				else throw new Error(
+				else throw _prefixErr(
 					`URL "${url}" doesn't resolve any route`
 				)
 			}
@@ -689,12 +690,12 @@ export class SvelteRouter implements Readable<Router> {
 						urlQuery: urlQuery || undefined,
 					}
 				}
-				else throw new Error(
+				else throw _prefixErr(
 					`URL "${url}" doesn't resolve any route`
 				)
 			}
 		}
-		throw new Error('unexpected')
+		throw _prefixErr('unexpected')
 	}
 
 	/**
@@ -728,7 +729,7 @@ export class SvelteRouter implements Readable<Router> {
 				if (params !== undefined) {
 					path += `/${params[token]}`
 				}
-				else throw new Error(
+				else throw _prefixErr(
 					`expected parameter '${token}' but got '${params}'`
 				)
 			}
@@ -770,7 +771,7 @@ export class SvelteRouter implements Readable<Router> {
 			typeof routeName !== 'string' || routeName === '' ||
 			!(routeName in routes)
 		) {
-			throw new Error(`invalid route name: '${routeName}'`)
+			throw _prefixErr(`invalid route name: '${routeName}'`)
 		}
 		return this.stringifyRouteToURL(
 			get$(this.#internalStore).routes[routeName].path,
@@ -823,7 +824,7 @@ export class SvelteRouter implements Readable<Router> {
 				catch(newRoute) {
 					if (newRoute === undefined) {
 						if (location.name === '') {
-							throw new Error(
+							throw _prefixErr(
 								'unable to handle before push rejection, ' +
 								'no current location is set to fall back to'
 							)
@@ -841,7 +842,7 @@ export class SvelteRouter implements Readable<Router> {
 					}
 
 					if (!(newRoute as RouterRouteData)?.name) {
-						throw new Error(
+						throw _prefixErr(
 							'before-push hook must reject with a return of a ' +
 							`new route; returned: ${JSON.stringify(newRoute)}`,
 						)
@@ -875,8 +876,8 @@ export class SvelteRouter implements Readable<Router> {
 						r.component = comp
 						r.lazyComponent.fetched = true
 					} else {
-						err = Error(
-							'[SvelteRouter] unexpected, component lazy ' +
+						err = _prefixErr(
+							'unexpected, component lazy ' +
 							'loaded but route isn\'t internally existing.'
 						)
 					}
@@ -913,8 +914,8 @@ export class SvelteRouter implements Readable<Router> {
 						r.component = comp
 						r.lazyComponent.fetched = true
 					} else {
-						err = Error(
-							'[SvelteRouter] unexpected, component lazy ' +
+						err = _prefixErr(
+							'unexpected, component lazy ' +
 							'loaded but route isn\'t internally existing.'
 						)
 					}
@@ -923,9 +924,7 @@ export class SvelteRouter implements Readable<Router> {
 					}
 					return $rtrStr
 				})
-				if (err !== null) {
-					throw new Error(err)
-				}
+				if (err !== null) {throw err}
 				return
 			}).catch((err)=> {
 				this.#store.update(($rtrStr)=> {
@@ -1060,8 +1059,8 @@ export class SvelteRouter implements Readable<Router> {
 
 export function link(node: Element, router?: SvelteRouter) {
 	if (!node || !node.tagName || node.tagName.toLowerCase() != 'a') {
-		throw Error(
-			'[SvelteRouter] <RouterLink> The action "link" can only be used ' +
+		throw _prefixErr(
+			'<RouterLink> The action "link" can only be used ' +
 			'on <a> tags with a href attribute'
 		)
 	}
@@ -1070,8 +1069,8 @@ export function link(node: Element, router?: SvelteRouter) {
 			router : getContext('svelte_router') as SvelteRouter
 	)
 	if (!instance) {
-		throw new Error(
-			'[SvelteRouter] <RouterLink> invalid router instance. Either use ' +
+		throw _prefixErr(
+			'<RouterLink> invalid router instance. Either use ' +
 			'this component inside a <RouterViewport/> or provide the router ' +
 			'instance in the paramters.'
 		)
@@ -1079,7 +1078,7 @@ export function link(node: Element, router?: SvelteRouter) {
 
 	const href = node.getAttribute('href')
 	if (!href || href.length < 1) {
-		throw Error(`invalid URL "${href}" as "href"`)
+		throw _prefixErr(`invalid URL "${href}" as "href"`)
 	}
 	const route = instance.getRoute(href)
 	function _onclick(event: Event): void {
@@ -1131,10 +1130,8 @@ function isValidNumber(char: string): boolean {
  * @returns boolean
  */
 function isValidTokenChar(char: string): boolean {
-	// 0-9
-	if (isValidNumber(char)) return true
-	// A-Z a-z
-	if (isValidLetter(char)) return true
+	// 0-9 or A-Z a-z
+	if (isValidNumber(char) || isValidLetter(char)) return true
 
 	switch (char) {
 		case Char.ExclamationMark:
@@ -1165,7 +1162,7 @@ function isValidTokenChar(char: string): boolean {
  */
 function validateRouteName(routeName: string): Error|null {
 	if (routeName.length < 1) {
-		return new Error(`invalid route name (empty)`)
+		return _prefixErr(`invalid route name (empty)`)
 	}
 	for (const char of routeName) {
 		// 0-9
@@ -1179,7 +1176,7 @@ function validateRouteName(routeName: string): Error|null {
 			case Char.Underscore:
 				continue
 		}
-		return new Error(
+		return _prefixErr(
 			`unexpected character ${char} in route name "${routeName}"`
 		)
 	}
@@ -1198,12 +1195,12 @@ function validateRouteName(routeName: string): Error|null {
  */
 function parsePathTemplate(template: string): PathTemplate {
 	if (typeof template !== 'string') {
-		throw new Error(
+		throw (
 			`unexpected type of route path "${template}" (${typeof template})`
 		)
 	}
 	if (template.length < 1) {
-		throw new Error(`invalid path (empty)`)
+		throw (`invalid path (empty)`)
 	}
 
 	const templObject: PathTemplate = {tokens: [], params: []}
@@ -1228,7 +1225,7 @@ function parsePathTemplate(template: string): PathTemplate {
 	}
 
 	if (template.charAt(0) !== Char.Slash) {
-		throw new Error('a path template must begin with a slash')
+		throw ('a path template must begin with a slash')
 	}
 	
 	let isPreviousSlash = true
@@ -1259,7 +1256,7 @@ function parsePathTemplate(template: string): PathTemplate {
 				tokenStart = itr
 			}
 			else {
-				throw new Error(`unexpected '${char}' at ${itr}`)
+				throw (`unexpected '${char}' at ${itr}`)
 			}
 		}
 		else if (char == Char.Slash) {
@@ -1273,7 +1270,7 @@ function parsePathTemplate(template: string): PathTemplate {
 			isParam = false
 		}
 		else if (!isValidTokenChar(char)) {
-			throw new Error(`unexpected '${char}' at ${itr}`)
+			throw (`unexpected '${char}' at ${itr}`)
 		}
 
 		if (itr+1 >= template.length) {
@@ -1281,7 +1278,7 @@ function parsePathTemplate(template: string): PathTemplate {
 			if (isPreviousSlash) break
 
 			if (char == Char.Colon) {
-				throw new Error(`missing parameter name at ${itr}`)
+				throw (`missing parameter name at ${itr}`)
 			}
 
 			const err = addToken(isParam, tokenStart, template.length)
@@ -1305,17 +1302,17 @@ function parseURLPath(url: string): {
 	urlQuery: RouteParams|undefined,
 } {
 	if (typeof url !== 'string') {
-		throw new Error(`unexpected path type (${typeof url})`)
+		throw _prefixErr(`unexpected path type (${typeof url})`)
 	}
 	if (url.length < 1) {
-		throw new Error(`invalid path (empty)`)
+		throw _prefixErr(`invalid path (empty)`)
 	}
 
 	const pathTokens: Array<string> = []
 
 	// Check if path begin with a slash
 	if (url[0] !== Char.Slash) {
-		throw new Error('a path path must begin with a slash')
+		throw _prefixErr('a path path must begin with a slash')
 	}
 
 	let isPreviousSlash = true
@@ -1331,12 +1328,8 @@ function parseURLPath(url: string): {
 			isPreviousSlash = false
 
 			// Start scanning token
-			if (isValidTokenChar(char)) {
-				tokenStart = itr
-			}
-			else throw new Error(
-				`unexpected "${char}" at ${itr}`
-			)
+			if (isValidTokenChar(char)) {tokenStart = itr}
+			else throw _prefixErr(`unexpected "${char}" at ${itr}`)
 		}
 		// Terminating slash encountered
 		else if (char == Char.Slash) {
@@ -1352,7 +1345,7 @@ function parseURLPath(url: string): {
 		}
 		// Validate character
 		else if (!isValidTokenChar(char)) {
-			throw new Error(`unexpected "${char}" at ${itr}`)
+			throw _prefixErr(`unexpected "${char}" at ${itr}`)
 		}
 
 

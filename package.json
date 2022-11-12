@@ -1,6 +1,6 @@
 {
   "name": "@danielsharkov/svelte-router",
-  "version": "3.1.4",
+  "version": "3.1.5",
   "description": "A simple, fast and easy to use svelte router.",
   "license": "MIT",
   "type": "module",
