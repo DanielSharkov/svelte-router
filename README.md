@@ -32,11 +32,14 @@
 
 Depending on your package manager just:
 
-PNPM `pnpm add -D @danielsharkov/svelte-router`
+**pnpm**<br>
+`pnpm add -D @danielsharkov/svelte-router`
 
-YARN `yarn add --dev @danielsharkov/svelte-router`
+**yarn**<br>
+`yarn add --dev @danielsharkov/svelte-router`
 
-NPM `npm i -D @danielsharkov/svelte-router`
+**npm**<br>
+`npm i -D @danielsharkov/svelte-router`
 
 And done 😁 🎉
 
