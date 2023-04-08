@@ -1,6 +1,6 @@
 {
   "name": "@danielsharkov/svelte-router",
-  "version": "3.1.5",
+  "version": "3.1.6",
   "description": "A simple, fast and easy to use svelte router.",
   "license": "MIT",
   "type": "module",
@@ -46,15 +46,9 @@
     "lint": "eslint \"src/*.ts\""
   },
   "exports": {
-    "./package.json": "./package.json",
     ".": {
-      "types": "./index.d.ts",
-      "browser": {
-        "import": "./index.mjs",
-        "require": "./index.js"
-      },
-      "import": "./index.mjs",
-      "require": "./index.js"
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
     }
   },
   "devDependencies": {
