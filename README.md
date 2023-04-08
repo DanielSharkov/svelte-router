@@ -59,7 +59,7 @@ import ViewAlbum from './views/Album.svelte'
 export default new SvelteRouter({
 	window: window,
 	scrollingElement: window.document.scrollingElement,
-	baseUrl: '/persistent/path',
+	basePath: '/persistent/path',
 	routes: {
 		'home': {
 			path: '/',
