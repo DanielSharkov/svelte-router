@@ -51,7 +51,7 @@ Initialize a new router with the configuration in `src/router.ts` or where
 ever you like, maybe even inside `App.svelte` as a module - it's up to you.
 
 ```ts
-import {SvelteRouter} from '@danielsharkov/svelte-router'
+import SvelteRouter from '@danielsharkov/svelte-router'
 import ViewHome from './views/Home.svelte'
 import ViewUser from './views/User.svelte'
 import ViewAlbum from './views/Album.svelte'
@@ -80,7 +80,7 @@ export default new SvelteRouter({
 })
 ```
 
-* `window` should usually be assigned the [browser object model](https://www.w3schools.com/js/js_window.asp)
+* `window` should usually be assigned the [browser object model](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model)
 but can also be used for testing and debugging purposes.
 
 * `scrollingElement` should usually be assigned the [Document.scrollingElement](https://developer.mozilla.org/en-US/docs/Web/API/document/scrollingElement),
@@ -105,19 +105,19 @@ passing it your created router instance:
 
 ```svelte
 <script lang='ts'>
-import {Viewport} from '@danielsharkov/svelte-router'
+import Viewport from '@danielsharkov/svelte-router/Viewport'
 import router from './router'
 </script>
 
 <nav>
-	<button on:click={router.push('home')}>
+	<button on:click={()=> router.push('home')}>
 		Home
 	</button>
-	<button on:click={router.push('home', {uid: 'paul'})}>
+	<button on:click={()=> router.push('users.user', {uid: 'paul'})}>
 		Paul
 	</button>
-	<button on:click={router.push('home', {userId: 'alex', albumId: 'sumer-2016'})}>
-		Bob
+	<button on:click={()=> router.push('user.album', {uid: 'alex', aid: 'sumer-2016'})}>
+		Bob's Album
 	</button>
 </nav>
 
@@ -134,7 +134,7 @@ import router from './router'
 # Fallback Route
 
 ```ts
-import {SvelteRouter} from '@danielsharkov/svelte-router'
+import SvelteRouter from '@danielsharkov/svelte-router'
 import ViewHome from './views/Home.svelte'
 import ViewNotFound from './views/NotFound.svelte'
 
@@ -178,10 +178,10 @@ and `props`.
 ```svelte
 <script lang='ts'>
 export let router
-// router: is the SvelteRouter instance you have provided to <Viewport>
+// router: is the SvelteRouter instance you provided to <Viewport>
 
 export let params
-// params: is either undefined or the parameters you have defined
+// params: is either undefined or the parameters you defined
 // in the path template for this route in the router config.
 
 export let urlQuery
@@ -225,7 +225,7 @@ component:
 
 <sub>**router.ts**</sub>
 ```ts
-import {SvelteRouter} from '@danielsharkov/svelte-router'
+import SvelteRouter from '@danielsharkov/svelte-router'
 import ViewHome from './views/Home.svelte'
 import ViewAbout from './views/About.svelte'
 
@@ -268,7 +268,7 @@ export let props
 </script>
 
 <!-- We assume that these props always exist,
-because we hard-code them into the router -->
+because we hard-coded them into the router -->
 <h1>{props.nav.title}</h1>
 <img src={props.picture} alt='Some beautiful picture'>
 ```
@@ -356,7 +356,7 @@ It's defined right in the router config.
 Here's a simple example:
 
 ```ts
-import {SvelteRouter} from '@danielsharkov/svelte-router'
+import SvelteRouter from '@danielsharkov/svelte-router'
 import {get as get$} from 'svelte/store'
 import {isValidUserSession} from 'user_session'
 // isValidSession could be any of your implementations - in this example it is
@@ -429,7 +429,7 @@ To programmatically go back or forward in history just use the [browser history 
 
 ```svelte
 <script lang='ts'>
-import type {SvelteRouter} from '@danielsharkov/svelte-router'
+import type SvelteRouter from '@danielsharkov/svelte-router'
 export let router: SvelteRouter
 </script>
 
@@ -443,7 +443,7 @@ with the parameter values:
 
 ```svelte
 <script lang='ts'>
-import type {SvelteRouter} from '@danielsharkov/svelte-router'
+import type SvelteRouter from '@danielsharkov/svelte-router'
 export let router: SvelteRouter
 </script>
 
@@ -497,7 +497,7 @@ passing it the router instance. You may pass HTML tag attributes like `class`,
 
 <sub>**router.ts**</sub>
 ```ts
-import {SvelteRouter} from '@danielsharkov/svelte-router'
+import SvelteRouter from '@danielsharkov/svelte-router'
 import ViewHome from './views/Home.svelte'
 import ViewAbout from './views/About.svelte'
 import ViewUser from './views/User.svelte'
@@ -539,7 +539,7 @@ export default new SvelteRouter({
 <sub>**components/Nav.svelte**</sub>
 ```svelte
 <script>
-import {RouteLink} from '@danielsharkov/svelte-router'
+import RouteLink from '@danielsharkov/svelte-router/RouteLink'
 import router from '../router'
 </script>
 
@@ -608,7 +608,8 @@ a.active {
 ##### Outside a `<Viewport>`
 ```svelte
 <script>
-import {Viewport, link} from '@danielsharkov/svelte-router'
+import {link} from '@danielsharkov/svelte-router'
+import Viewport from '@danielsharkov/svelte-router/Viewport'
 import router from './router'
 </script>
 
@@ -731,7 +732,7 @@ You may even provide a `loading` and `fallback` component, which act like a
 regular route component, meaning they [can be smoothly transitioned](#route-transitions) as well.
 
 ```ts
-import {SvelteRouter} from '@danielsharkov/svelte-router'
+import SvelteRouter from '@danielsharkov/svelte-router'
 import RouteLoading from './components/RouteLoading.svelte'
 import RouteLoadFailedFallback from './components/RouteLoadFailedFallback.svelte'
 

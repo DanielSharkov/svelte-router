@@ -1,7 +1,7 @@
 {
   "name": "@danielsharkov/svelte-router",
-  "version": "3.1.6",
-  "description": "A simple, fast and easy to use svelte router.",
+  "version": "4.0.0",
+  "description": "A simple, fast and easy to use svelte router. Developed with smooth page transitions in mind.",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -37,8 +37,8 @@
   "private": false,
   "source": "src/index.ts",
   "types": "src/index.d.ts",
-  "main": "src/router.js",
-  "module": "src/router.mjs",
+  "main": "src/index.js",
+  "module": "src/index.mjs",
   "svelte": "src/index.js",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
@@ -49,7 +49,9 @@
     ".": {
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
-    }
+    },
+    "./Viewport": "./src/Viewport.svelte",
+    "./RouteLink": "./src/RouteLink.svelte"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",

@@ -2,10 +2,6 @@ import type {Readable} from 'svelte/store'
 import {writable, get as get$} from 'svelte/store'
 import {SvelteComponent, tick, getContext} from 'svelte'
 
-export {default as Viewport} from './Viewport.svelte'
-export {default as RouteLink} from './RouteLink.svelte'
-
-
 function _prefixErr(msg: string) {
 	return new Error('[SvelteRouter] ' + msg)
 }
@@ -223,7 +219,7 @@ export type Router = {
 
 // Svelte Router implementation ::::::::::::::::::::::::::::::::::::::::::::::::
 
-export class SvelteRouter implements Readable<Router> {
+export default class SvelteRouter implements Readable<Router> {
 	#store = writable<Router>({
 		isLoading: true,
 		routes: {},
@@ -695,7 +691,7 @@ export class SvelteRouter implements Readable<Router> {
 				)
 			}
 		}
-		throw _prefixErr('unexpected')
+		throw _prefixErr(`cannot get any route by url "${url}"`)
 	}
 
 	/**
