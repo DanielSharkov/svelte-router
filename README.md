@@ -105,7 +105,7 @@ passing it your created router instance:
 
 ```svelte
 <script lang='ts'>
-import Viewport from '@danielsharkov/svelte-router/Viewport'
+import Viewport from '@danielsharkov/svelte-router/src/Viewport.svelte'
 import router from './router'
 </script>
 
